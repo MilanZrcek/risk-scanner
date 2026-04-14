@@ -95,7 +95,8 @@ export async function analyzeArticles(
   const stream = client.messages.stream({
     model: "claude-opus-4-6",
     max_tokens: 8000,
-    thinking: { type: "adaptive" },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    thinking: { type: "adaptive" } as any,
     system: SYSTEM_PROMPT,
     messages: [
       {
