@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(where node:*)",
+      "Bash(where npm:*)",
+      "Bash(powershell:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/milan/AppData/Local/Programs/**)",
+      "Read(//c//**)"
+    ]
+  }
+}

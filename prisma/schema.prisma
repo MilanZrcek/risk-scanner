@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ScanRun {
+  id              String           @id @default(cuid())
+  startedAt       DateTime         @default(now())
+  completedAt     DateTime?
+  status          String           // pending | completed | failed
+  topicsFound     Int              @default(0)
+  articlesRead    Int              @default(0)
+  error           String?
+  topics          RiskTopic[]
+  kriMeasurements KriMeasurement[]
+
+  @@index([startedAt])
+}
+
+model KriMeasurement {
+  id          String   @id @default(cuid())
+  scanRunId   String
+  scanRun     ScanRun  @relation(fields: [scanRunId], references: [id], onDelete: Cascade)
+  key         String   // e.g. "regulatory_pressure"
+  name        String   // e.g. "Regulatory Pressure"
+  category    String   // matches RiskTopic category
+  volume7d    Int      // article count last 7 days
+  volume7dPrev Int     // article count previous 7 days
+  avgDaily    Float    // 90-day daily average
+  score       Float    // 0–100 normalized score
+  trend       String   // rising | stable | falling
+  trendPct    Float    // % change vs previous 7 days
+  sparkline   String   @db.Text // JSON array of last 30 daily volumes
+  createdAt   DateTime @default(now())
+
+  @@index([scanRunId])
+  @@index([key, createdAt])
+}
+
+model RiskTopic {
+  id           String    @id @default(cuid())
+  scanRunId    String
+  scanRun      ScanRun   @relation(fields: [scanRunId], references: [id], onDelete: Cascade)
+  title        String
+  summary      String    @db.Text
+  category     String    // Regulatory | Cybersecurity | Market | Geopolitical | Technology | Operational
+  impactScore  Int       // 1–10
+  impactReason String    @db.Text
+  createdAt    DateTime  @default(now())
+  articles     Article[]
+
+  @@index([scanRunId])
+  @@index([impactScore])
+  @@index([category])
+}
+
+model Article {
+  id          String    @id @default(cuid())
+  topicId     String
+  topic       RiskTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  title       String
+  source      String
+  url         String
+  publishedAt DateTime
+  summary     String    @db.Text
+
+  @@index([topicId])
+}
