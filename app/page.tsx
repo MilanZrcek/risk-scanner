@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import RiskCard from "@/components/RiskCard";
-import ScanButton from "@/components/ScanButton";
 import CategoryFilter from "@/components/CategoryFilter";
 import KriPanel from "@/components/KriPanel";
 import { Suspense } from "react";
@@ -61,14 +60,11 @@ async function Dashboard({ searchParams }: PageProps) {
   return (
     <div>
       {/* Header row */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Risk Dashboard</h2>
-          <p className="text-sm text-gray-400">
-            EU financial sector · External risk signals
-          </p>
-        </div>
-        <ScanButton />
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-white mb-1">Risk Dashboard</h2>
+        <p className="text-sm text-gray-400">
+          EU financial sector · External risk signals
+        </p>
       </div>
 
       {/* KRI Panel */}
@@ -125,7 +121,7 @@ async function Dashboard({ searchParams }: PageProps) {
               )}
             </p>
           ) : (
-            <p className="text-xs text-gray-500">No scans yet. Click &quot;Scan Now&quot; to start.</p>
+            <p className="text-xs text-gray-500">No scans yet. First scan runs automatically at 06:00 UTC.</p>
           )}
         </div>
         <Suspense>
@@ -138,7 +134,7 @@ async function Dashboard({ searchParams }: PageProps) {
         <div className="text-center py-20 text-gray-500">
           {scanRun
             ? "No risk topics found for this filter."
-            : "Run a scan to identify current EU financial risk topics."}
+            : "Awaiting first scheduled scan."}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
