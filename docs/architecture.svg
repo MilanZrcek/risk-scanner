@@ -1,0 +1,359 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 900" width="1300" height="900" font-family="'Segoe UI', Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#6b7280"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#f59e0b"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#10b981"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1300" height="900" fill="#0f172a"/>
+
+  <!-- Title -->
+  <text x="650" y="36" text-anchor="middle" fill="#f1f5f9" font-size="18" font-weight="700">EU Financial Risk Scanner — Architecture</text>
+  <text x="650" y="56" text-anchor="middle" fill="#64748b" font-size="12">Next.js 15 · Prisma · Neon PostgreSQL · Claude Sonnet 4.6 · Vercel</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- TRIGGERS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="20" y="75" width="200" height="148" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="120" y="94" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">TRIGGERS</text>
+
+  <rect x="34" y="100" width="172" height="34" rx="6" fill="#1d4ed8" fill-opacity="0.3" stroke="#3b82f6" stroke-width="1"/>
+  <text x="120" y="113" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="600">Vercel Cron · Full scan</text>
+  <text x="120" y="126" text-anchor="middle" fill="#60a5fa" font-size="10">06:00 UTC · /api/cron/scan</text>
+
+  <rect x="34" y="141" width="172" height="34" rx="6" fill="#1d4ed8" fill-opacity="0.3" stroke="#3b82f6" stroke-width="1"/>
+  <text x="120" y="154" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="600">Vercel Cron · KRI scan</text>
+  <text x="120" y="167" text-anchor="middle" fill="#60a5fa" font-size="10">12:00 UTC · /api/cron/kri</text>
+
+  <rect x="34" y="183" width="172" height="32" rx="6" fill="#1d4ed8" fill-opacity="0.15" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="120" y="196" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="600">Manual POST</text>
+  <text x="120" y="208" text-anchor="middle" fill="#60a5fa" font-size="10">/api/scan · /api/scan/kri</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- EXTERNAL DATA SOURCES -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="20" y="233" width="200" height="640" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="120" y="252" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">EXTERNAL DATA SOURCES</text>
+
+  <!-- NewsAPI -->
+  <rect x="34" y="260" width="172" height="42" rx="6" fill="#0c4a6e" fill-opacity="0.6" stroke="#0284c7" stroke-width="1"/>
+  <text x="120" y="275" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="700">NewsAPI.org</text>
+  <text x="120" y="288" text-anchor="middle" fill="#7dd3fc" font-size="9">5 EU financial queries · ≤40 articles</text>
+  <text x="120" y="299" text-anchor="middle" fill="#38bdf8" font-size="9">7-day window · dedup by URL</text>
+
+  <!-- Claude Sonnet -->
+  <rect x="34" y="310" width="172" height="42" rx="6" fill="#3b0764" fill-opacity="0.6" stroke="#a855f7" stroke-width="1"/>
+  <text x="120" y="325" text-anchor="middle" fill="#d8b4fe" font-size="11" font-weight="700">Anthropic Claude</text>
+  <text x="120" y="338" text-anchor="middle" fill="#d8b4fe" font-size="9">claude-sonnet-4-6</text>
+  <text x="120" y="349" text-anchor="middle" fill="#c084fc" font-size="9">No thinking · JSON output</text>
+
+  <!-- ACLED (active) -->
+  <rect x="34" y="360" width="172" height="42" rx="6" fill="#422006" fill-opacity="0.8" stroke="#f59e0b" stroke-width="1"/>
+  <text x="120" y="375" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">ACLED</text>
+  <text x="120" y="388" text-anchor="middle" fill="#fbbf24" font-size="9">Drupal login · weekly Excel (SheetJS)</text>
+  <text x="120" y="399" text-anchor="middle" fill="#d97706" font-size="9">EU-27 violence events · active</text>
+
+  <!-- ReliefWeb (pending) -->
+  <rect x="34" y="410" width="172" height="42" rx="6" fill="#1c1917" fill-opacity="0.8" stroke="#78716c" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="120" y="425" text-anchor="middle" fill="#a8a29e" font-size="11" font-weight="700">ReliefWeb</text>
+  <text x="120" y="438" text-anchor="middle" fill="#a8a29e" font-size="9">Humanitarian disasters</text>
+  <text x="120" y="449" text-anchor="middle" fill="#78716c" font-size="9">appname auth · pending</text>
+
+  <!-- SkyLink -->
+  <rect x="34" y="460" width="172" height="42" rx="6" fill="#052e16" fill-opacity="0.8" stroke="#16a34a" stroke-width="1"/>
+  <text x="120" y="475" text-anchor="middle" fill="#86efac" font-size="11" font-weight="700">SkyLink / RapidAPI</text>
+  <text x="120" y="488" text-anchor="middle" fill="#86efac" font-size="9">NOTAMs · 25 global FIRs</text>
+  <text x="120" y="499" text-anchor="middle" fill="#4ade80" font-size="9">X-RapidAPI-Key · active</text>
+
+  <!-- MeteoAlarm (new) -->
+  <rect x="34" y="510" width="172" height="42" rx="6" fill="#0c3444" fill-opacity="0.8" stroke="#06b6d4" stroke-width="1"/>
+  <text x="120" y="525" text-anchor="middle" fill="#67e8f9" font-size="11" font-weight="700">MeteoAlarm (new)</text>
+  <text x="120" y="538" text-anchor="middle" fill="#67e8f9" font-size="9">EU weather warnings · 27 CAP feeds</text>
+  <text x="120" y="549" text-anchor="middle" fill="#22d3ee" font-size="9">Red + orange only · free</text>
+
+  <!-- Open-Meteo / EFI (new) -->
+  <rect x="34" y="560" width="172" height="42" rx="6" fill="#082f49" fill-opacity="0.8" stroke="#0ea5e9" stroke-width="1"/>
+  <text x="120" y="575" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="700">Open-Meteo / EFI (new)</text>
+  <text x="120" y="588" text-anchor="middle" fill="#7dd3fc" font-size="9">ECMWF IFS · 5 key cities</text>
+  <text x="120" y="599" text-anchor="middle" fill="#38bdf8" font-size="9">30-day baseline · free API</text>
+
+  <!-- WorldMonitor (placeholder) -->
+  <rect x="34" y="610" width="172" height="42" rx="6" fill="#1c1917" fill-opacity="0.8" stroke="#57534e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="120" y="625" text-anchor="middle" fill="#78716c" font-size="11" font-weight="700">WorldMonitor</text>
+  <text x="120" y="638" text-anchor="middle" fill="#78716c" font-size="9">Country Instability Index</text>
+  <text x="120" y="649" text-anchor="middle" fill="#57534e" font-size="9">no public API · placeholder</text>
+
+  <!-- Internal DB KRI -->
+  <rect x="34" y="660" width="172" height="42" rx="6" fill="#1e3a5f" fill-opacity="0.8" stroke="#2563eb" stroke-width="1"/>
+  <text x="120" y="675" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="700">Internal DB KRI</text>
+  <text x="120" y="688" text-anchor="middle" fill="#93c5fd" font-size="9">5 category scores from scan history</text>
+  <text x="120" y="699" text-anchor="middle" fill="#60a5fa" font-size="9">Regulatory · Cyber · Market · Geo · Op</text>
+
+  <!-- Legend -->
+  <rect x="34" y="712" width="172" height="152" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="120" y="727" text-anchor="middle" fill="#64748b" font-size="9" font-weight="600">LEGEND</text>
+  <rect x="44" y="734" width="28" height="10" rx="3" fill="#052e16" stroke="#16a34a" stroke-width="1"/>
+  <text x="80" y="743" fill="#94a3b8" font-size="9">Active source</text>
+  <rect x="44" y="750" width="28" height="10" rx="3" fill="#422006" stroke="#f59e0b" stroke-width="1"/>
+  <text x="80" y="759" fill="#94a3b8" font-size="9">Active · free weekly file</text>
+  <rect x="44" y="766" width="28" height="10" rx="3" fill="#0c3444" stroke="#06b6d4" stroke-width="1"/>
+  <text x="80" y="775" fill="#94a3b8" font-size="9">New source (this update)</text>
+  <rect x="44" y="782" width="28" height="10" rx="3" fill="#1c1917" stroke="#78716c" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="80" y="791" fill="#94a3b8" font-size="9">Pending / inactive</text>
+  <line x1="44" y1="802" x2="72" y2="802" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="80" y="806" fill="#94a3b8" font-size="9">Data flow</text>
+  <line x1="44" y1="818" x2="72" y2="818" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="80" y="822" fill="#94a3b8" font-size="9">Read / API response</text>
+  <line x1="44" y1="834" x2="72" y2="834" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <text x="80" y="838" fill="#94a3b8" font-size="9">Pending flow</text>
+  <text x="44" y="855" fill="#64748b" font-size="8">EFI cities: Brussels · Prague</text>
+  <text x="44" y="865" fill="#64748b" font-size="8">Bratislava · Budapest · Bucharest</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SCAN PIPELINE -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="248" y="75" width="380" height="490" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="438" y="94" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">SCAN PIPELINE  (lib/scanner.ts)</text>
+
+  <!-- Full-scan-only bracket -->
+  <rect x="255" y="103" width="366" height="103" rx="4" fill="none" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4,3" opacity="0.35"/>
+  <text x="574" y="112" fill="#3b82f6" font-size="8" opacity="0.7">Full scan only · 06:00 UTC</text>
+
+  <!-- Step 1: Fetch news -->
+  <rect x="262" y="108" width="352" height="44" rx="6" fill="#0c4a6e" fill-opacity="0.5" stroke="#0284c7" stroke-width="1"/>
+  <text x="438" y="125" text-anchor="middle" fill="#7dd3fc" font-size="12" font-weight="700">① Fetch News</text>
+  <text x="438" y="139" text-anchor="middle" fill="#7dd3fc" font-size="10">lib/newsapi.ts · 5 parallel queries · cap 40 articles · RawArticle[]</text>
+
+  <line x1="438" y1="152" x2="438" y2="162" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 2: Analyze -->
+  <rect x="262" y="162" width="352" height="44" rx="6" fill="#3b0764" fill-opacity="0.5" stroke="#a855f7" stroke-width="1"/>
+  <text x="438" y="179" text-anchor="middle" fill="#d8b4fe" font-size="12" font-weight="700">② Analyze with Claude</text>
+  <text x="438" y="193" text-anchor="middle" fill="#d8b4fe" font-size="10">lib/analyzer.ts · claude-sonnet-4-6 · AnalyzedTopic[] · impactScore 1–10</text>
+
+  <line x1="438" y1="206" x2="438" y2="218" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- KRI entry note -->
+  <text x="438" y="228" text-anchor="middle" fill="#475569" font-size="9">── KRI-only scan (12:00 UTC) also enters here ──</text>
+
+  <!-- Step 3: KRIs -->
+  <rect x="262" y="232" width="352" height="180" rx="6" fill="#052e16" fill-opacity="0.4" stroke="#15803d" stroke-width="1"/>
+  <text x="438" y="249" text-anchor="middle" fill="#86efac" font-size="12" font-weight="700">③ Measure KRIs  (Promise.allSettled)</text>
+
+  <rect x="272" y="256" width="150" height="28" rx="4" fill="#1e3a5f" fill-opacity="0.8" stroke="#2563eb" stroke-width="1"/>
+  <text x="347" y="268" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="600">Internal DB KRI</text>
+  <text x="347" y="279" text-anchor="middle" fill="#60a5fa" font-size="8">5 category scores</text>
+
+  <rect x="432" y="256" width="172" height="28" rx="4" fill="#052e16" fill-opacity="0.8" stroke="#16a34a" stroke-width="1"/>
+  <text x="518" y="268" text-anchor="middle" fill="#86efac" font-size="9" font-weight="600">NOTAM KRI</text>
+  <text x="518" y="279" text-anchor="middle" fill="#4ade80" font-size="8">25 FIRs · tier 1 / 3</text>
+
+  <rect x="272" y="290" width="150" height="28" rx="4" fill="#422006" fill-opacity="0.6" stroke="#f59e0b" stroke-width="1"/>
+  <text x="347" y="302" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="600">ACLED KRI</text>
+  <text x="347" y="313" text-anchor="middle" fill="#d97706" font-size="8">EU-27 violence events</text>
+
+  <rect x="432" y="290" width="172" height="28" rx="4" fill="#1c1917" fill-opacity="0.8" stroke="#78716c" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="518" y="302" text-anchor="middle" fill="#a8a29e" font-size="9" font-weight="600">ReliefWeb KRIs</text>
+  <text x="518" y="313" text-anchor="middle" fill="#78716c" font-size="8">Crisis count + severity</text>
+
+  <rect x="272" y="324" width="150" height="28" rx="4" fill="#0c3444" fill-opacity="0.8" stroke="#06b6d4" stroke-width="1"/>
+  <text x="347" y="336" text-anchor="middle" fill="#67e8f9" font-size="9" font-weight="600">MeteoAlarm KRI</text>
+  <text x="347" y="347" text-anchor="middle" fill="#22d3ee" font-size="8">EU warnings · red+orange</text>
+
+  <rect x="432" y="324" width="172" height="28" rx="4" fill="#082f49" fill-opacity="0.8" stroke="#0ea5e9" stroke-width="1"/>
+  <text x="518" y="336" text-anchor="middle" fill="#7dd3fc" font-size="9" font-weight="600">EFI KRI</text>
+  <text x="518" y="347" text-anchor="middle" fill="#38bdf8" font-size="8">5 cities · z-score vs baseline</text>
+
+  <rect x="272" y="358" width="332" height="24" rx="4" fill="#1c1917" fill-opacity="0.8" stroke="#57534e" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="438" y="373" text-anchor="middle" fill="#57534e" font-size="9">WorldMonitor KRI  (placeholder · inactive)</text>
+
+  <text x="438" y="398" text-anchor="middle" fill="#6b7280" font-size="9">allKriResults: KriResult[]  ·  failed sources log warning, do not abort scan</text>
+
+  <line x1="438" y1="412" x2="438" y2="422" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 4: Persist -->
+  <rect x="262" y="422" width="352" height="64" rx="6" fill="#1a1a2e" fill-opacity="0.8" stroke="#4f46e5" stroke-width="1"/>
+  <text x="438" y="440" text-anchor="middle" fill="#a5b4fc" font-size="12" font-weight="700">④ Persist  (Prisma $transaction)</text>
+  <text x="438" y="455" text-anchor="middle" fill="#a5b4fc" font-size="10">KriMeasurement[] + ScanRun → DB  (both scan types)</text>
+  <text x="438" y="468" text-anchor="middle" fill="#818cf8" font-size="9">News scan additionally writes: RiskTopic + Article[]</text>
+  <text x="438" y="479" text-anchor="middle" fill="#818cf8" font-size="9">Each scan type creates its own ScanRun record</text>
+
+  <line x1="438" y1="486" x2="438" y2="496" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- DATABASE -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="248" y="575" width="380" height="215" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="438" y="594" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">DATABASE  ·  Neon PostgreSQL (serverless)</text>
+
+  <rect x="262" y="602" width="352" height="28" rx="4" fill="#1a1a2e" stroke="#6366f1" stroke-width="1"/>
+  <text x="438" y="621" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="700">ScanRun</text>
+
+  <rect x="262" y="638" width="165" height="52" rx="4" fill="#1a1a2e" stroke="#6366f1" stroke-width="1"/>
+  <text x="344" y="655" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="700">RiskTopic</text>
+  <text x="344" y="668" text-anchor="middle" fill="#818cf8" font-size="9">title · summary · category</text>
+  <text x="344" y="679" text-anchor="middle" fill="#818cf8" font-size="9">impactScore 1–10 · impactReason</text>
+
+  <rect x="437" y="638" width="177" height="52" rx="4" fill="#1a1a2e" stroke="#6366f1" stroke-width="1"/>
+  <text x="525" y="655" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="700">KriMeasurement</text>
+  <text x="525" y="668" text-anchor="middle" fill="#818cf8" font-size="9">key · score · trend · trendPct</text>
+  <text x="525" y="679" text-anchor="middle" fill="#818cf8" font-size="9">sparkline · details (JSON blob)</text>
+
+  <rect x="262" y="698" width="165" height="26" rx="4" fill="#1a1a2e" stroke="#6366f1" stroke-width="1"/>
+  <text x="344" y="715" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="700">Article</text>
+
+  <text x="437" y="712" fill="#475569" font-size="9">Page reads KRIs: latest ScanRun (any type)</text>
+  <text x="437" y="724" fill="#475569" font-size="9">Page reads Topics: latest with topicsFound &gt; 0</text>
+  <text x="437" y="736" fill="#475569" font-size="9">Prisma ORM · prisma db push · cuid() IDs</text>
+  <text x="437" y="748" fill="#475569" font-size="9">details JSON → click-through modals in UI</text>
+  <text x="437" y="760" fill="#475569" font-size="9">Indexes: startedAt · (key,createdAt) · impactScore</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- FRONTEND -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="660" y="75" width="340" height="490" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="830" y="94" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">FRONTEND  ·  Next.js 15 App Router</text>
+
+  <!-- page.tsx -->
+  <rect x="674" y="102" width="312" height="82" rx="6" fill="#0c4a6e" fill-opacity="0.4" stroke="#0284c7" stroke-width="1"/>
+  <text x="830" y="120" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="700">app/page.tsx  (Server Component)</text>
+  <text x="830" y="134" text-anchor="middle" fill="#7dd3fc" font-size="9">force-dynamic · direct Prisma query on each render</text>
+  <text x="830" y="147" text-anchor="middle" fill="#38bdf8" font-size="9">KRI: latest completed scan (any type)</text>
+  <text x="830" y="160" text-anchor="middle" fill="#38bdf8" font-size="9">Topics: latest scan with topicsFound &gt; 0</text>
+  <text x="830" y="173" text-anchor="middle" fill="#0ea5e9" font-size="9">risk/[id] detail · ?category= · ?scanRunId= history nav</text>
+
+  <!-- KriPanel -->
+  <rect x="674" y="196" width="312" height="96" rx="6" fill="#052e16" fill-opacity="0.5" stroke="#16a34a" stroke-width="1"/>
+  <text x="830" y="214" text-anchor="middle" fill="#86efac" font-size="11" font-weight="700">KriPanel  ("use client")</text>
+  <text x="830" y="228" text-anchor="middle" fill="#86efac" font-size="9">KriCard grid · ScoreGauge (0–100) · Sparkline SVG · TrendArrow</text>
+  <text x="830" y="242" text-anchor="middle" fill="#4ade80" font-size="9">4 detail modals via useState:</text>
+  <text x="830" y="255" text-anchor="middle" fill="#4ade80" font-size="9">NotamModal · AcledModal · MeteoAlarmModal · EfiModal</text>
+  <text x="830" y="268" text-anchor="middle" fill="#22c55e" font-size="9">EfiModal: peak vs 30d baseline · σ deviation labels</text>
+  <text x="830" y="281" text-anchor="middle" fill="#22c55e" font-size="9">MeteoAlarm: filters moderate/yellow at display time</text>
+
+  <!-- RiskCard + CategoryFilter -->
+  <rect x="674" y="304" width="148" height="54" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="748" y="320" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700">RiskCard</text>
+  <text x="748" y="334" text-anchor="middle" fill="#64748b" font-size="9">title · category badge</text>
+  <text x="748" y="347" text-anchor="middle" fill="#64748b" font-size="9">impactScore · article count</text>
+
+  <rect x="834" y="304" width="152" height="54" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="910" y="320" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700">CategoryFilter</text>
+  <text x="910" y="334" text-anchor="middle" fill="#64748b" font-size="9">6 categories · ?category=</text>
+  <text x="910" y="347" text-anchor="middle" fill="#64748b" font-size="9">Tailwind color map</text>
+
+  <!-- API Routes -->
+  <rect x="674" y="370" width="312" height="116" rx="6" fill="#1a1a2e" fill-opacity="0.6" stroke="#4f46e5" stroke-width="1"/>
+  <text x="830" y="387" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="700">API Routes</text>
+
+  <rect x="684" y="394" width="136" height="26" rx="4" fill="#1a1a2e" stroke="#4338ca" stroke-width="1"/>
+  <text x="752" y="405" text-anchor="middle" fill="#a5b4fc" font-size="9" font-weight="600">GET /api/risks</text>
+  <text x="752" y="415" text-anchor="middle" fill="#818cf8" font-size="8">JSON: topics + KRIs</text>
+
+  <rect x="830" y="394" width="146" height="26" rx="4" fill="#1a1a2e" stroke="#4338ca" stroke-width="1"/>
+  <text x="903" y="405" text-anchor="middle" fill="#a5b4fc" font-size="9" font-weight="600">GET /api/cron/scan</text>
+  <text x="903" y="415" text-anchor="middle" fill="#818cf8" font-size="8">full scan · Bearer auth</text>
+
+  <rect x="684" y="426" width="136" height="26" rx="4" fill="#1a1a2e" stroke="#4338ca" stroke-width="1"/>
+  <text x="752" y="437" text-anchor="middle" fill="#a5b4fc" font-size="9" font-weight="600">GET /api/cron/kri</text>
+  <text x="752" y="447" text-anchor="middle" fill="#818cf8" font-size="8">KRI-only cron · Bearer auth</text>
+
+  <rect x="830" y="426" width="146" height="26" rx="4" fill="#1a1a2e" stroke="#4338ca" stroke-width="1"/>
+  <text x="903" y="437" text-anchor="middle" fill="#a5b4fc" font-size="9" font-weight="600">POST /api/scan(/kri)</text>
+  <text x="903" y="447" text-anchor="middle" fill="#818cf8" font-size="8">manual trigger · secret</text>
+
+  <rect x="684" y="458" width="292" height="20" rx="4" fill="#1a1a2e" stroke="#312e81" stroke-width="1"/>
+  <text x="830" y="471" text-anchor="middle" fill="#6366f1" font-size="8">maxDuration 300s · Vercel Hobby: 2 crons max · once-daily only</text>
+
+  <!-- Vercel Deployment -->
+  <rect x="674" y="490" width="312" height="70" rx="6" fill="#1c0533" fill-opacity="0.6" stroke="#7c3aed" stroke-width="1"/>
+  <text x="830" y="507" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="700">Vercel Deployment</text>
+  <text x="830" y="521" text-anchor="middle" fill="#a78bfa" font-size="9">DATABASE_URL · NEWS_API_KEY · ANTHROPIC_API_KEY</text>
+  <text x="830" y="534" text-anchor="middle" fill="#a78bfa" font-size="9">RAPIDAPI_KEY · CRON_SECRET · ACLED_EMAIL/PASSWORD</text>
+  <text x="830" y="547" text-anchor="middle" fill="#a78bfa" font-size="9">RELIEFWEB_APPNAME · WORLDMONITOR_API_KEY · SKIP_GDELT</text>
+  <text x="830" y="558" text-anchor="middle" fill="#7c3aed" font-size="8">risk-scanner-lime.vercel.app</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- KRI SCORING LOGIC -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="660" y="575" width="340" height="220" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="830" y="594" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">KRI SCORING LOGIC</text>
+
+  <rect x="674" y="602" width="312" height="183" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+
+  <text x="684" y="617" fill="#f59e0b" font-size="9" font-weight="700">Internal DB KRI (5 categories)</text>
+  <text x="684" y="628" fill="#64748b" font-size="8">score = avg(impactScore per category) × 10  · trend = ±10% latest vs prev scan</text>
+
+  <text x="684" y="643" fill="#f59e0b" font-size="9" font-weight="700">NOTAM KRI</text>
+  <text x="684" y="654" fill="#64748b" font-size="8">tier 3 = FIR CLOSED / MILITARY INVASION / ARMED CONFLICT  ·  tier 1 = other restrictions</text>
+  <text x="684" y="665" fill="#64748b" font-size="8">score = min(100, Σ min(count,20)×tier×5 / 4)  ·  expired NOTAMs filtered out</text>
+
+  <text x="684" y="680" fill="#f59e0b" font-size="9" font-weight="700">ACLED KRI</text>
+  <text x="684" y="691" fill="#64748b" font-size="8">score = min(100, events_week / 6000 × 100)  ·  EU-27 only  ·  current week via SheetJS</text>
+
+  <text x="684" y="706" fill="#f59e0b" font-size="9" font-weight="700">MeteoAlarm KRI</text>
+  <text x="684" y="717" fill="#64748b" font-size="8">score = min(100, (red×4 + orange×2) / 20 × 100)  ·  moderate/yellow excluded</text>
+
+  <text x="684" y="732" fill="#f59e0b" font-size="9" font-weight="700">EFI KRI (Extreme Weather · 5 Cities)</text>
+  <text x="684" y="743" fill="#64748b" font-size="8">z = (peak_7d_forecast − 30d_mean) / max(actual_std, min_std)</text>
+  <text x="684" y="754" fill="#64748b" font-size="8">min_std: temp 4°C · precip 5mm · wind 10km/h  (prevents dry-period inflation)</text>
+  <text x="684" y="765" fill="#64748b" font-size="8">EFI = min(1, |z|/3)  ·  score = max EFI across 5 cities × 100</text>
+
+  <text x="684" y="780" fill="#f59e0b" font-size="9" font-weight="700">ReliefWeb KRIs (pending)</text>
+  <text x="684" y="791" fill="#64748b" font-size="8">score = min(100, volume7d / REFERENCE × 100)  ·  crisis count + severity index</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROWS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Triggers → Pipeline -->
+  <line x1="220" y1="117" x2="262" y2="130" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="220" y1="155" x2="248" y2="295" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="220" y1="199" x2="248" y2="340" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-blue)"/>
+
+  <!-- External sources → Pipeline steps -->
+  <!-- NewsAPI → Step 1 -->
+  <line x1="220" y1="281" x2="262" y2="130" stroke="#0284c7" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Claude → Step 2 -->
+  <line x1="220" y1="331" x2="262" y2="185" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- ACLED → ACLED KRI sub-box -->
+  <line x1="220" y1="381" x2="272" y2="305" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- ReliefWeb → ReliefWeb KRI (right col) -->
+  <line x1="220" y1="431" x2="432" y2="305" stroke="#78716c" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <!-- SkyLink → NOTAM KRI (right col) -->
+  <line x1="220" y1="481" x2="432" y2="270" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- MeteoAlarm → MeteoAlarm KRI (left col) -->
+  <line x1="220" y1="531" x2="272" y2="338" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Open-Meteo → EFI KRI (right col) -->
+  <line x1="220" y1="581" x2="432" y2="338" stroke="#0ea5e9" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- WorldMonitor → WM sub-box -->
+  <line x1="220" y1="631" x2="272" y2="370" stroke="#57534e" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <!-- Internal DB → Internal DB KRI sub-box -->
+  <line x1="220" y1="681" x2="272" y2="270" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Pipeline → DB -->
+  <line x1="438" y1="496" x2="438" y2="575" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- DB → Frontend (Prisma read on render) -->
+  <line x1="628" y1="650" x2="660" y2="148" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="648" y="400" fill="#3b82f6" font-size="9" transform="rotate(-75,648,400)">Prisma read on render</text>
+
+  <!-- Browser -->
+  <rect x="1060" y="272" width="120" height="40" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+  <text x="1120" y="287" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700">Browser</text>
+  <text x="1120" y="302" text-anchor="middle" fill="#64748b" font-size="9">User / Risk Analyst</text>
+  <line x1="1000" y1="287" x2="1060" y2="287" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1060" y1="298" x2="1000" y2="298" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="1030" y="283" text-anchor="middle" fill="#475569" font-size="8">HTTPS</text>
+
+</svg>
