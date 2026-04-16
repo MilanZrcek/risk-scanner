@@ -38,14 +38,15 @@ export async function GET(req: NextRequest) {
         select: { id: true, startedAt: true, topicsFound: true },
       }),
       prisma.kriMeasurement.findMany({
-        where: { scanRunId: targetScanRunId },
+        distinct: ["key"],
+        orderBy:  [{ key: "asc" }, { createdAt: "desc" }],
         select: {
           id: true, key: true, name: true, category: true,
           score: true, trend: true, trendPct: true,
           volume7d: true, volume7dPrev: true, avgDaily: true,
           sparkline: true, details: true,
         },
-      }),
+      }).then((rows) => rows.sort((a, b) => b.score - a.score)),
     ]);
 
     return NextResponse.json({ topics, scanRun, scanRuns, kriMeasurements });

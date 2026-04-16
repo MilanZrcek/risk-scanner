@@ -15,22 +15,14 @@ async function Dashboard({ searchParams }: PageProps) {
   const params = await searchParams;
   const { category, scanRunId } = params;
 
-  // KRI measurements: always from the latest completed scan (KRI-only or full)
   // Topics: from the latest scan that actually produced topics (news+AI scan)
-  const [latestAnyScan, latestNewsScan] = await Promise.all([
-    prisma.scanRun.findFirst({
-      where: { status: "completed" },
-      orderBy: { startedAt: "desc" },
-    }),
-    scanRunId
-      ? prisma.scanRun.findUnique({ where: { id: scanRunId } })
-      : prisma.scanRun.findFirst({
-          where: { status: "completed", topicsFound: { gt: 0 } },
-          orderBy: { startedAt: "desc" },
-        }),
-  ]);
+  const latestNewsScan = scanRunId
+    ? await prisma.scanRun.findUnique({ where: { id: scanRunId } })
+    : await prisma.scanRun.findFirst({
+        where: { status: "completed", topicsFound: { gt: 0 } },
+        orderBy: { startedAt: "desc" },
+      });
 
-  const kriScanRunId   = latestAnyScan?.id ?? undefined;
   const topicScanRunId = latestNewsScan?.id ?? undefined;
 
   const [topics, recentScans, kriMeasurements] = await Promise.all([
@@ -50,12 +42,13 @@ async function Dashboard({ searchParams }: PageProps) {
       take: 5,
       select: { id: true, startedAt: true, topicsFound: true },
     }),
-    kriScanRunId
-      ? prisma.kriMeasurement.findMany({
-          where: { scanRunId: kriScanRunId },
-          orderBy: { score: "desc" },
-        })
-      : Promise.resolve([]),
+    // KRI measurements: latest record per key, independent of scan run.
+    // This way a KRI that is temporarily paused (e.g. NOTAM) still shows
+    // its last known value instead of disappearing from the dashboard.
+    prisma.kriMeasurement.findMany({
+      distinct:  ["key"],
+      orderBy:   [{ key: "asc" }, { createdAt: "desc" }],
+    }).then((rows) => rows.sort((a, b) => b.score - a.score)),
   ]);
 
   const scanRun = latestNewsScan;
