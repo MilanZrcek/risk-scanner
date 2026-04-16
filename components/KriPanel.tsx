@@ -26,6 +26,19 @@ interface AcledDetails {
   byEventType:     AcledEventTypeRow[];
 }
 
+interface ReliefWebDisasterDetail {
+  id:       number;
+  name:     string;
+  types:    string[];
+  status:   string;
+  date:     string;
+  severity: number;
+}
+interface ReliefWebDetails {
+  disasters: ReliefWebDisasterDetail[];
+  fetchedAt: string;
+}
+
 interface MeteoWarning {
   country:  string;
   area:     string;
@@ -362,6 +375,70 @@ function AcledModal({ details, onClose }: { details: AcledDetails; onClose: () =
 }
 
 // ---------------------------------------------------------------------------
+// ReliefWeb detail modal
+// ---------------------------------------------------------------------------
+
+function severityColor(s: number): { dot: string; badge: string } {
+  if (s >= 10) return { dot: "bg-red-500",    badge: "text-red-400 bg-red-500/10 border-red-500/30" };
+  if (s >= 8)  return { dot: "bg-orange-500", badge: "text-orange-400 bg-orange-500/10 border-orange-500/30" };
+  if (s >= 5)  return { dot: "bg-yellow-400", badge: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30" };
+  return       { dot: "bg-green-500",  badge: "text-green-400 bg-green-500/10 border-green-500/30" };
+}
+
+function ReliefWebModal({ details, onClose }: { details: ReliefWebDetails; onClose: () => void }) {
+  const fetchDate = details.fetchedAt
+    ? new Date(details.fetchedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Humanitarian Disasters · Last 7 days (ReliefWeb)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {details.disasters.length} active · sorted by severity · {fetchDate}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 py-3 space-y-1.5">
+          {details.disasters.map((d) => {
+            const { dot, badge } = severityColor(d.severity);
+            return (
+              <div key={d.id} className="rounded-lg border border-gray-800 bg-gray-900/50 px-3 py-2 flex items-start gap-3">
+                <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${dot}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs text-gray-200 font-medium leading-snug">{d.name}</span>
+                    <span className="text-xs text-gray-600 shrink-0">
+                      {new Date(d.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {d.types.map((t) => (
+                      <span key={t} className={`text-xs px-1.5 py-0.5 rounded border font-medium ${badge}`}>{t}</span>
+                    ))}
+                    <span className={`text-xs px-1.5 py-0.5 rounded border ${d.status === "alert" ? "text-orange-400 border-orange-500/30 bg-orange-500/10" : "text-gray-500 border-gray-700"}`}>
+                      {d.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {details.disasters.length === 0 && (
+            <p className="text-xs text-gray-500 py-4 text-center">No new disasters in the last 7 days</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // MeteoAlarm detail modal
 // ---------------------------------------------------------------------------
 
@@ -542,6 +619,7 @@ function KriCard({ kri, onDetail }: { kri: KriMeasurement; onDetail?: () => void
     (Array.isArray(parsedDetails) && parsedDetails.length > 0) ||
     (parsedDetails !== null && typeof parsedDetails === "object" && (
       "byCountry" in (parsedDetails as object) ||
+      "disasters" in (parsedDetails as object) ||
       "warnings"  in (parsedDetails as object) ||
       "cities"    in (parsedDetails as object)
     ));
@@ -584,10 +662,11 @@ function KriCard({ kri, onDetail }: { kri: KriMeasurement; onDetail?: () => void
 // ---------------------------------------------------------------------------
 
 export default function KriPanel({ measurements }: { measurements: KriMeasurement[] }) {
-  const [activeNotam,  setActiveNotam]  = useState<NotamDetail[]     | null>(null);
-  const [activeAcled,  setActiveAcled]  = useState<AcledDetails      | null>(null);
-  const [activeMeteo,  setActiveMeteo]  = useState<MeteoAlarmDetails | null>(null);
-  const [activeEfi,    setActiveEfi]    = useState<EfiDetails        | null>(null);
+  const [activeNotam,     setActiveNotam]     = useState<NotamDetail[]        | null>(null);
+  const [activeAcled,     setActiveAcled]     = useState<AcledDetails          | null>(null);
+  const [activeReliefWeb, setActiveReliefWeb] = useState<ReliefWebDetails      | null>(null);
+  const [activeMeteo,     setActiveMeteo]     = useState<MeteoAlarmDetails     | null>(null);
+  const [activeEfi,       setActiveEfi]       = useState<EfiDetails            | null>(null);
 
   if (measurements.length === 0) return null;
 
@@ -600,6 +679,8 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
         setActiveNotam(parsed as NotamDetail[]);
       } else if ("byCountry" in parsed) {
         setActiveAcled(parsed as AcledDetails);
+      } else if ("disasters" in parsed) {
+        setActiveReliefWeb(parsed as ReliefWebDetails);
       } else if ("warnings" in parsed) {
         setActiveMeteo(parsed as MeteoAlarmDetails);
       } else if ("cities" in parsed) {
@@ -625,10 +706,11 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
         </div>
       </div>
 
-      {activeNotam && <NotamModal      details={activeNotam} onClose={() => setActiveNotam(null)} />}
-      {activeAcled && <AcledModal      details={activeAcled} onClose={() => setActiveAcled(null)} />}
-      {activeMeteo && <MeteoAlarmModal details={activeMeteo} onClose={() => setActiveMeteo(null)} />}
-      {activeEfi   && <EfiModal        details={activeEfi}   onClose={() => setActiveEfi(null)}   />}
+      {activeNotam     && <NotamModal      details={activeNotam}     onClose={() => setActiveNotam(null)}     />}
+      {activeAcled     && <AcledModal      details={activeAcled}     onClose={() => setActiveAcled(null)}     />}
+      {activeReliefWeb && <ReliefWebModal  details={activeReliefWeb} onClose={() => setActiveReliefWeb(null)} />}
+      {activeMeteo     && <MeteoAlarmModal details={activeMeteo}     onClose={() => setActiveMeteo(null)}     />}
+      {activeEfi       && <EfiModal        details={activeEfi}       onClose={() => setActiveEfi(null)}       />}
     </>
   );
 }

@@ -58,6 +58,20 @@ interface RwResponse {
   totalCount: number;
 }
 
+export interface ReliefWebDisasterDetail {
+  id:       number;
+  name:     string;
+  types:    string[];
+  status:   string;
+  date:     string;   // YYYY-MM-DD
+  severity: number;   // highest type weight
+}
+
+export interface ReliefWebDetails {
+  disasters:  ReliefWebDisasterDetail[];
+  fetchedAt:  string;
+}
+
 // ---------------------------------------------------------------------------
 // Fetch helpers
 // ---------------------------------------------------------------------------
@@ -160,7 +174,25 @@ function buildSparkline(byDay: Map<string, number>, startDate: Date, days: numbe
 // KRI builders
 // ---------------------------------------------------------------------------
 
-function buildCrisisCountKri(disasters: RwDisaster[], today: Date): KriResult {
+function buildDetails(disasters: RwDisaster[], windowStart: Date): ReliefWebDetails {
+  const details: ReliefWebDisasterDetail[] = disasters
+    .filter((d) => new Date(d.fields.date.created) >= windowStart)
+    .map((d) => {
+      const types = (d.fields.type ?? []).map((t) => t.name);
+      return {
+        id:       d.id,
+        name:     d.fields.name,
+        types,
+        status:   d.fields.status,
+        date:     d.fields.date.created.split("T")[0],
+        severity: severityWeight(types),
+      };
+    })
+    .sort((a, b) => b.severity - a.severity || a.date.localeCompare(b.date) * -1);
+  return { disasters: details, fetchedAt: new Date().toISOString() };
+}
+
+function buildCrisisCountKri(disasters: RwDisaster[], today: Date): KriResult & { details: ReliefWebDetails } {
   const byDay = countByDay(disasters);
 
   const window7Start = new Date(today);
@@ -199,10 +231,11 @@ function buildCrisisCountKri(disasters: RwDisaster[], today: Date): KriResult {
     trend,
     trendPct,
     sparkline,
+    details:      buildDetails(disasters, window7Start),
   };
 }
 
-function buildSeverityIndexKri(disasters: RwDisaster[], today: Date): KriResult {
+function buildSeverityIndexKri(disasters: RwDisaster[], today: Date): KriResult & { details: ReliefWebDetails } {
   const byDay = severityByDay(disasters);
 
   const window7Start = new Date(today);
@@ -241,6 +274,7 @@ function buildSeverityIndexKri(disasters: RwDisaster[], today: Date): KriResult 
     trend,
     trendPct,
     sparkline,
+    details:      buildDetails(disasters, window7Start),
   };
 }
 

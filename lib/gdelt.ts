@@ -21,11 +21,12 @@ export interface KriResult {
 }
 
 export const KRI_DEFINITIONS: KriDefinition[] = [
-  { key: "regulatory_pressure", name: "Regulatory Pressure",  category: "Regulatory"    },
-  { key: "cyber_threat",        name: "Cyber Threat Level",   category: "Cybersecurity" },
-  { key: "market_stress",       name: "Market Stress",        category: "Market"        },
-  { key: "geopolitical_risk",   name: "Geopolitical Risk",    category: "Geopolitical"  },
-  { key: "fraud_aml",           name: "Fraud & AML Activity", category: "Operational"   },
+  { key: "regulatory_pressure", name: "Regulatory Pressure",    category: "Regulatory"    },
+  { key: "cyber_threat",        name: "Cyber Threat Level",     category: "Cybersecurity" },
+  { key: "market_stress",       name: "Market Stress",          category: "Market"        },
+  { key: "geopolitical_risk",   name: "Geopolitical Risk",      category: "Geopolitical"  },
+  { key: "fraud_aml",           name: "Fraud & AML Activity",   category: "Operational"   },
+  { key: "tech_disruption",     name: "Technology Disruption",  category: "Technology"    },
 ];
 
 async function computeKriForCategory(def: KriDefinition): Promise<KriResult> {
