@@ -79,10 +79,17 @@ function std(values: number[]): number {
   return Math.sqrt(variance) || 1;
 }
 
+// Minimum baseline std per variable — prevents near-zero variance during calm
+// periods from inflating z-scores artificially (e.g. 4mm rain after a dry week).
+const MIN_STD_TEMP   = 4;   // °C
+const MIN_STD_PRECIP = 5;   // mm/day  (real extreme ≥ 30mm)
+const MIN_STD_WIND   = 10;  // km/h    (storm-force winds > 60 km/h)
+
 /** z-score capped at ±3, then mapped to 0–1 (0 = normal, 1 = extreme). */
-function efiScore(baselineVals: number[], forecastVal: number | null): number {
+function efiScore(baselineVals: number[], forecastVal: number | null, minStd = 1): number {
   if (forecastVal === null || !isFinite(forecastVal)) return 0;
-  const z = (forecastVal - mean(baselineVals)) / std(baselineVals);
+  const s = Math.max(std(baselineVals), minStd);
+  const z = (forecastVal - mean(baselineVals)) / s;
   return Math.min(1, Math.abs(z) / 3);
 }
 
@@ -118,9 +125,9 @@ async function fetchCity(city: typeof CITIES[number]): Promise<EfiCityData> {
 
   // Per-day combined EFI for each forecast day
   const forecast = Array.from({ length: 7 }, (_, i) => {
-    const t = efiScore(bl_temp,   fc_temp[i]);
-    const p = efiScore(bl_precip, fc_precip[i]);
-    const w = efiScore(bl_wind,   fc_wind[i]);
+    const t = efiScore(bl_temp,   fc_temp[i],   MIN_STD_TEMP);
+    const p = efiScore(bl_precip, fc_precip[i], MIN_STD_PRECIP);
+    const w = efiScore(bl_wind,   fc_wind[i],   MIN_STD_WIND);
     return Math.round(Math.max(t, p, w) * 100) / 100;
   });
 
@@ -139,9 +146,9 @@ async function fetchCity(city: typeof CITIES[number]): Promise<EfiCityData> {
   const blMeanPrecip = mean(bl_precip);
   const blMeanWind   = mean(bl_wind);
 
-  function zScore(baselineVals: number[], peakVal: number | null): number {
+  function zScore(baselineVals: number[], peakVal: number | null, minStd: number): number {
     if (peakVal === null) return 0;
-    const s = std(baselineVals);
+    const s = Math.max(std(baselineVals), minStd);
     return Math.round(((peakVal - mean(baselineVals)) / s) * 10) / 10;
   }
 
@@ -149,19 +156,19 @@ async function fetchCity(city: typeof CITIES[number]): Promise<EfiCityData> {
     code:       city.code,
     name:       city.name,
     efi,
-    efiTemp:    efiScore(bl_temp,   fc_temp[0]),
-    efiPrecip:  efiScore(bl_precip, fc_precip[0]),
-    efiWind:    efiScore(bl_wind,   fc_wind[0]),
+    efiTemp:    efiScore(bl_temp,   fc_temp[0],   MIN_STD_TEMP),
+    efiPrecip:  efiScore(bl_precip, fc_precip[0], MIN_STD_PRECIP),
+    efiWind:    efiScore(bl_wind,   fc_wind[0],   MIN_STD_WIND),
     forecast,
     tempMax,
     tempMean:   Math.round(blMeanTemp   * 10) / 10,
-    tempZ:      zScore(bl_temp,   tempMax),
+    tempZ:      zScore(bl_temp,   tempMax,   MIN_STD_TEMP),
     precipMax:  precipMax !== null ? Math.round(precipMax * 10) / 10 : null,
     precipMean: Math.round(blMeanPrecip * 10) / 10,
-    precipZ:    zScore(bl_precip, precipMax),
+    precipZ:    zScore(bl_precip, precipMax, MIN_STD_PRECIP),
     windMax:    windMax   !== null ? Math.round(windMax   * 10) / 10 : null,
     windMean:   Math.round(blMeanWind   * 10) / 10,
-    windZ:      zScore(bl_wind,   windMax),
+    windZ:      zScore(bl_wind,   windMax,   MIN_STD_WIND),
   };
 }
 
