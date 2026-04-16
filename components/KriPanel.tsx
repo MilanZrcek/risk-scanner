@@ -253,7 +253,7 @@ function AcledModal({ details, onClose }: { details: AcledDetails; onClose: () =
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <div>
-            <h3 className="text-white font-semibold text-sm">Violence Events · Europe &amp; Central Asia (ACLED)</h3>
+            <h3 className="text-white font-semibold text-sm">Violence Events · EU (ACLED)</h3>
             <p className="text-xs text-gray-500 mt-0.5">
               Week of {weekLabel}&nbsp;·&nbsp;
               <span className="text-white">{fmt(details.totalEvents)}</span> events&nbsp;·&nbsp;

@@ -318,7 +318,7 @@ export async function measureAcledKri(): Promise<KriResult> {
 
   return {
     key:      "acled_violence",
-    name:     "Violence Events · Europe (ACLED)",
+    name:     "Violence Events · EU (ACLED)",
     category: "Geopolitical",
     volume7d,
     volume7dPrev,
