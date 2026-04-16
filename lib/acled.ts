@@ -152,6 +152,16 @@ async function findLatestFileUrl(cookie: string): Promise<{ url: string; weekDat
 // Parse Excel — returns total event count (sum across all rows / countries)
 // ---------------------------------------------------------------------------
 
+// EU-27 member states — names as used in ACLED data
+const EU_COUNTRIES = new Set([
+  "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus",
+  "Czech Republic", "Czechia", "Denmark", "Estonia", "Finland",
+  "France", "Germany", "Greece", "Hungary", "Ireland", "Italy",
+  "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands",
+  "Poland", "Portugal", "Romania", "Slovakia", "Slovenia",
+  "Spain", "Sweden",
+]);
+
 export interface AcledCountryRow {
   country:    string;
   events:     number;
@@ -194,11 +204,13 @@ function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities
 
   for (const row of rows) {
     if (Number(row["WEEK"]) !== latestWeek) continue;
-    filteredRows++;
 
+    const country   = String(row["COUNTRY"]    ?? row["country"]    ?? "Unknown");
+    if (!EU_COUNTRIES.has(country)) continue;   // EU-27 only
+
+    filteredRows++;
     const events    = Number(row["EVENTS"]     ?? row["events"]     ?? 0);
     const fatal     = Number(row["FATALITIES"] ?? row["fatalities"] ?? 0);
-    const country   = String(row["COUNTRY"]    ?? row["country"]    ?? "Unknown");
     const eventType = String(row["EVENT_TYPE"] ?? row["event_type"] ?? "Unknown");
 
     if (isFinite(events)) totalEvents += events;
