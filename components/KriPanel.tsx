@@ -26,6 +26,37 @@ interface AcledDetails {
   byEventType:     AcledEventTypeRow[];
 }
 
+interface MeteoWarning {
+  country:  string;
+  area:     string;
+  event:    string;
+  severity: "extreme" | "severe" | "moderate";
+  sent:     string;
+}
+interface MeteoAlarmDetails {
+  totalWarnings: number;
+  redCount:      number;
+  orangeCount:   number;
+  yellowCount:   number;
+  warnings:      MeteoWarning[];
+}
+
+interface EfiCityData {
+  code:      string;
+  name:      string;
+  efi:       number;
+  efiTemp:   number;
+  efiPrecip: number;
+  efiWind:   number;
+  forecast:  number[];
+}
+interface EfiDetails {
+  cities:     EfiCityData[];
+  maxEfi:     number;
+  maxEfiCity: string;
+  fetchedAt:  string;
+}
+
 interface NotamDetail {
   id:        string;
   fir:       string;
@@ -321,6 +352,145 @@ function AcledModal({ details, onClose }: { details: AcledDetails; onClose: () =
 }
 
 // ---------------------------------------------------------------------------
+// MeteoAlarm detail modal
+// ---------------------------------------------------------------------------
+
+const SEVERITY_STYLE: Record<string, { label: string; color: string; dot: string }> = {
+  extreme: { label: "Red / Extreme",    color: "text-red-400 bg-red-500/10 border-red-500/30",      dot: "bg-red-500"    },
+  severe:  { label: "Orange / Severe",  color: "text-orange-400 bg-orange-500/10 border-orange-500/30", dot: "bg-orange-500" },
+  moderate:{ label: "Yellow / Moderate",color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30", dot: "bg-yellow-400" },
+};
+
+function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Weather Warnings · EU (MeteoAlarm)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              <span className="text-red-400 font-medium">{details.redCount} red</span>
+              &nbsp;·&nbsp;<span className="text-orange-400">{details.orangeCount} orange</span>
+              &nbsp;·&nbsp;<span className="text-yellow-400">{details.yellowCount} yellow</span>
+              &nbsp;·&nbsp;{details.totalWarnings} total active
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 py-3 space-y-1.5">
+          {details.warnings.map((w, i) => {
+            const s = SEVERITY_STYLE[w.severity] ?? SEVERITY_STYLE.moderate;
+            return (
+              <div key={i} className={`rounded-lg border px-3 py-2 flex items-start gap-3 ${s.color}`}>
+                <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold uppercase tracking-wide">{w.country}</span>
+                    <span className="text-xs font-medium capitalize">{w.event}</span>
+                    <span className="text-xs text-gray-500 truncate">{w.area}</span>
+                  </div>
+                </div>
+                <span className="text-xs text-gray-600 shrink-0">
+                  {w.sent ? new Date(w.sent).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""}
+                </span>
+              </div>
+            );
+          })}
+          {details.warnings.length === 0 && (
+            <p className="text-xs text-gray-500 py-4 text-center">No active moderate–extreme warnings in EU</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EFI detail modal
+// ---------------------------------------------------------------------------
+
+function EfiBar({ value, color }: { value: number; color: string }) {
+  return (
+    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden w-full">
+      <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.round(value * 100)}%` }} />
+    </div>
+  );
+}
+
+function efiColor(v: number): string {
+  return v >= 0.7 ? "bg-red-500" : v >= 0.4 ? "bg-orange-500" : v >= 0.2 ? "bg-yellow-400" : "bg-green-500";
+}
+
+function MiniSparkline({ data }: { data: number[] }) {
+  if (data.length < 2) return <div className="h-6 w-16 bg-gray-800 rounded opacity-30" />;
+  const max = Math.max(...data, 0.01);
+  const w = 64, h = 24;
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - (v / max) * h}`).join(" L ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
+      <path d={`M ${pts}`} fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function EfiModal({ details, onClose }: { details: EfiDetails; onClose: () => void }) {
+  const fetchDate = details.fetchedAt
+    ? new Date(details.fetchedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Extreme Weather · Key Cities (EFI)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              7-day forecast via ECMWF IFS (Open-Meteo) · {fetchDate}
+              {details.maxEfi > 0.1 && (
+                <>&nbsp;·&nbsp;<span className="text-orange-400">highest: {details.maxEfiCity}</span></>
+              )}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          {details.cities.map((city) => (
+            <div key={city.code} className="bg-gray-900/60 rounded-xl p-3 border border-gray-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white text-sm font-semibold">{city.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold ${city.efi >= 0.7 ? "text-red-400" : city.efi >= 0.4 ? "text-orange-400" : city.efi >= 0.2 ? "text-yellow-400" : "text-green-400"}`}>
+                    {Math.round(city.efi * 100)}/100
+                  </span>
+                  <MiniSparkline data={city.forecast} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  { label: "Temperature", value: city.efiTemp },
+                  { label: "Precipitation", value: city.efiPrecip },
+                  { label: "Wind",          value: city.efiWind },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-24 shrink-0">{label}</span>
+                    <EfiBar value={value} color={efiColor(value)} />
+                    <span className="text-xs text-gray-500 w-8 text-right">{Math.round(value * 100)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // KRI card
 // ---------------------------------------------------------------------------
 
@@ -337,7 +507,11 @@ function KriCard({ kri, onDetail }: { kri: KriMeasurement; onDetail?: () => void
   try { if (kri.details) parsedDetails = JSON.parse(kri.details); } catch { /* ignore */ }
   const hasDetails =
     (Array.isArray(parsedDetails) && parsedDetails.length > 0) ||
-    (parsedDetails !== null && typeof parsedDetails === "object" && "byCountry" in (parsedDetails as object));
+    (parsedDetails !== null && typeof parsedDetails === "object" && (
+      "byCountry" in (parsedDetails as object) ||
+      "warnings"  in (parsedDetails as object) ||
+      "cities"    in (parsedDetails as object)
+    ));
 
   return (
     <div
@@ -377,8 +551,10 @@ function KriCard({ kri, onDetail }: { kri: KriMeasurement; onDetail?: () => void
 // ---------------------------------------------------------------------------
 
 export default function KriPanel({ measurements }: { measurements: KriMeasurement[] }) {
-  const [activeNotam,  setActiveNotam]  = useState<NotamDetail[] | null>(null);
-  const [activeAcled,  setActiveAcled]  = useState<AcledDetails  | null>(null);
+  const [activeNotam,  setActiveNotam]  = useState<NotamDetail[]     | null>(null);
+  const [activeAcled,  setActiveAcled]  = useState<AcledDetails      | null>(null);
+  const [activeMeteo,  setActiveMeteo]  = useState<MeteoAlarmDetails | null>(null);
+  const [activeEfi,    setActiveEfi]    = useState<EfiDetails        | null>(null);
 
   if (measurements.length === 0) return null;
 
@@ -386,10 +562,15 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
     if (!kri.details) return;
     try {
       const parsed = JSON.parse(kri.details);
+      if (!parsed || typeof parsed !== "object") return;
       if (Array.isArray(parsed)) {
         setActiveNotam(parsed as NotamDetail[]);
-      } else if (parsed && typeof parsed === "object" && "byCountry" in parsed) {
+      } else if ("byCountry" in parsed) {
         setActiveAcled(parsed as AcledDetails);
+      } else if ("warnings" in parsed) {
+        setActiveMeteo(parsed as MeteoAlarmDetails);
+      } else if ("cities" in parsed) {
+        setActiveEfi(parsed as EfiDetails);
       }
     } catch { /* ignore */ }
   }
@@ -411,12 +592,10 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
         </div>
       </div>
 
-      {activeNotam && (
-        <NotamModal details={activeNotam} onClose={() => setActiveNotam(null)} />
-      )}
-      {activeAcled && (
-        <AcledModal details={activeAcled} onClose={() => setActiveAcled(null)} />
-      )}
+      {activeNotam && <NotamModal      details={activeNotam} onClose={() => setActiveNotam(null)} />}
+      {activeAcled && <AcledModal      details={activeAcled} onClose={() => setActiveAcled(null)} />}
+      {activeMeteo && <MeteoAlarmModal details={activeMeteo} onClose={() => setActiveMeteo(null)} />}
+      {activeEfi   && <EfiModal        details={activeEfi}   onClose={() => setActiveEfi(null)}   />}
     </>
   );
 }
