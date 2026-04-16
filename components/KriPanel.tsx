@@ -369,6 +369,10 @@ const SEVERITY_STYLE: Record<string, { label: string; color: string; dot: string
 };
 
 function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onClose: () => void }) {
+  const warnings = details.warnings.filter((w) => w.severity === "extreme" || w.severity === "severe");
+  const redCount    = warnings.filter((w) => w.severity === "extreme").length;
+  const orangeCount = warnings.filter((w) => w.severity === "severe").length;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
@@ -376,9 +380,9 @@ function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onC
           <div>
             <h3 className="text-white font-semibold text-sm">Weather Warnings · EU (MeteoAlarm)</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              <span className="text-red-400 font-medium">{details.redCount} red</span>
-              &nbsp;·&nbsp;<span className="text-orange-400">{details.orangeCount} orange</span>
-              &nbsp;·&nbsp;{details.totalWarnings} total active
+              <span className="text-red-400 font-medium">{redCount} red</span>
+              &nbsp;·&nbsp;<span className="text-orange-400">{orangeCount} orange</span>
+              &nbsp;·&nbsp;{warnings.length} total active
             </p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
@@ -386,7 +390,7 @@ function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onC
           </button>
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-3 space-y-1.5">
-          {details.warnings.map((w, i) => {
+          {warnings.map((w, i) => {
             const s = SEVERITY_STYLE[w.severity] ?? SEVERITY_STYLE.severe;
             return (
               <div key={i} className={`rounded-lg border px-3 py-2 flex items-start gap-3 ${s.color}`}>
