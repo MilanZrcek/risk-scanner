@@ -31,7 +31,7 @@ export const KRI_DEFINITIONS: KriDefinition[] = [
 async function computeKriForCategory(def: KriDefinition): Promise<KriResult> {
   // Fetch last 30 completed scans with topics in this category
   const scans = await prisma.scanRun.findMany({
-    where: { status: "completed" },
+    where: { status: "completed", topicsFound: { gt: 0 } },
     orderBy: { startedAt: "desc" },
     take: 30,
     select: {
