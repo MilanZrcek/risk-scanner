@@ -2,6 +2,10 @@ import { prisma } from "./prisma";
 import { fetchEUFinancialNews } from "./newsapi";
 import { analyzeArticles } from "./analyzer";
 import { measureKRIs } from "./gdelt";
+import { measureAcledKri } from "./acled";
+import { measureReliefWebKris } from "./reliefweb";
+import { measureWorldMonitorKri } from "./worldmonitor";
+import { measureNotamKri } from "./notam";
 
 export async function runScan(): Promise<{ scanRunId: string; topicsFound: number }> {
   // Create scan run record
@@ -13,8 +17,27 @@ export async function runScan(): Promise<{ scanRunId: string; topicsFound: numbe
     // 1. Fetch news
     const articles = await fetchEUFinancialNews();
 
-    // 2. Measure KRIs via GDELT (skip locally if rate-limited)
-    const kriResults = process.env.SKIP_GDELT === "true" ? [] : await measureKRIs();
+    // 2. Measure KRIs via internal DB + ACLED
+    const [kriResults, acledKri, reliefwebKris, wmKri, notamKri] = await Promise.allSettled([
+      process.env.SKIP_GDELT === "true"   ? Promise.resolve([])      : measureKRIs(),
+      process.env.ACLED_EMAIL             ? measureAcledKri()         : Promise.resolve(null),
+      process.env.RELIEFWEB_APPNAME       ? measureReliefWebKris()    : Promise.resolve([]),
+      process.env.WORLDMONITOR_API_KEY    ? measureWorldMonitorKri()  : Promise.resolve(null),
+      process.env.RAPIDAPI_KEY            ? measureNotamKri()         : Promise.resolve(null),
+    ]);
+
+    const allKriResults = [
+      ...(kriResults.status    === "fulfilled" ? kriResults.value                                : []),
+      ...(acledKri.status      === "fulfilled" && acledKri.value    ? [acledKri.value]          : []),
+      ...(reliefwebKris.status === "fulfilled" ? reliefwebKris.value                             : []),
+      ...(wmKri.status         === "fulfilled" && wmKri.value       ? [wmKri.value]             : []),
+      ...(notamKri.status      === "fulfilled" && notamKri.value    ? [notamKri.value]          : []),
+    ];
+
+    if (acledKri.status      === "rejected") console.warn("ACLED KRI failed:",         acledKri.reason);
+    if (reliefwebKris.status === "rejected") console.warn("ReliefWeb KRI failed:",     reliefwebKris.reason);
+    if (wmKri.status         === "rejected") console.warn("World Monitor KRI failed:", wmKri.reason);
+    if (notamKri.status      === "rejected") console.warn("NOTAM KRI failed:",         notamKri.reason);
 
     // 2. Analyze articles with Claude
     const topics = await analyzeArticles(articles);
@@ -42,7 +65,7 @@ export async function runScan(): Promise<{ scanRunId: string; topicsFound: numbe
           },
         })
       ),
-      ...kriResults.map((kri) =>
+      ...allKriResults.map((kri) =>
         prisma.kriMeasurement.create({
           data: {
             scanRunId: scanRun.id,
@@ -56,6 +79,7 @@ export async function runScan(): Promise<{ scanRunId: string; topicsFound: numbe
             trend: kri.trend,
             trendPct: kri.trendPct,
             sparkline: JSON.stringify(kri.sparkline),
+            details:   kri.details !== undefined ? JSON.stringify(kri.details) : null,
           },
         })
       ),

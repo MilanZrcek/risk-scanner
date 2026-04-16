@@ -17,6 +17,7 @@ export interface KriResult {
   trend: "rising" | "stable" | "falling";
   trendPct: number;
   sparkline: number[];   // avg impact score per scan (last 30)
+  details?: unknown;     // KRI-specific structured detail data (serialised to DB as JSON)
 }
 
 export const KRI_DEFINITIONS: KriDefinition[] = [
