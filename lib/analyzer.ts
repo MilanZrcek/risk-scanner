@@ -91,22 +91,12 @@ export async function analyzeArticles(
 
   const articlesText = buildArticlesText(articles);
 
-  // Use streaming + finalMessage to handle long analysis without timeout
-  const stream = client.messages.stream({
-    model: "claude-opus-4-6",
-    max_tokens: 8000,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    thinking: { type: "adaptive" } as any,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: USER_PROMPT_TEMPLATE(articlesText),
-      },
-    ],
+  const response = await client.messages.create({
+    model:      "claude-sonnet-4-6",
+    max_tokens: 4096,
+    system:     SYSTEM_PROMPT,
+    messages:   [{ role: "user", content: USER_PROMPT_TEMPLATE(articlesText) }],
   });
-
-  const response = await stream.finalMessage();
 
   // Extract JSON from response
   const textBlock = response.content.find((b) => b.type === "text");
