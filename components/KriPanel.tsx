@@ -86,6 +86,8 @@ const VOLUME_LABELS: Record<string, string> = {
   reliefweb_severity:      "severity points",
   worldmonitor_cii:        "CII score",
   opensky_aviation_stress: "emergency squawks",
+  meteoalarm_warnings:     "active alerts",
+  weather_efi:             "EFI score",
 };
 
 function volumeLabel(key: string): string {

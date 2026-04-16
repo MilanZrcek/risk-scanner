@@ -15,43 +15,50 @@ async function Dashboard({ searchParams }: PageProps) {
   const params = await searchParams;
   const { category, scanRunId } = params;
 
-  // Get the latest completed scan (or requested scan)
-  let targetScanRunId = scanRunId;
-  if (!targetScanRunId) {
-    const latestScan = await prisma.scanRun.findFirst({
+  // KRI measurements: always from the latest completed scan (KRI-only or full)
+  // Topics: from the latest scan that actually produced topics (news+AI scan)
+  const [latestAnyScan, latestNewsScan] = await Promise.all([
+    prisma.scanRun.findFirst({
       where: { status: "completed" },
       orderBy: { startedAt: "desc" },
-    });
-    targetScanRunId = latestScan?.id ?? undefined;
-  }
+    }),
+    scanRunId
+      ? prisma.scanRun.findUnique({ where: { id: scanRunId } })
+      : prisma.scanRun.findFirst({
+          where: { status: "completed", topicsFound: { gt: 0 } },
+          orderBy: { startedAt: "desc" },
+        }),
+  ]);
 
-  const [topics, scanRun, recentScans, kriMeasurements] = await Promise.all([
-    targetScanRunId
+  const kriScanRunId   = latestAnyScan?.id ?? undefined;
+  const topicScanRunId = latestNewsScan?.id ?? undefined;
+
+  const [topics, recentScans, kriMeasurements] = await Promise.all([
+    topicScanRunId
       ? prisma.riskTopic.findMany({
           where: {
-            scanRunId: targetScanRunId,
+            scanRunId: topicScanRunId,
             ...(category ? { category } : {}),
           },
           include: { _count: { select: { articles: true } } },
           orderBy: { impactScore: "desc" },
         })
       : Promise.resolve([]),
-    targetScanRunId
-      ? prisma.scanRun.findUnique({ where: { id: targetScanRunId } })
-      : Promise.resolve(null),
     prisma.scanRun.findMany({
-      where: { status: "completed" },
+      where: { status: "completed", topicsFound: { gt: 0 } },
       orderBy: { startedAt: "desc" },
       take: 5,
       select: { id: true, startedAt: true, topicsFound: true },
     }),
-    targetScanRunId
+    kriScanRunId
       ? prisma.kriMeasurement.findMany({
-          where: { scanRunId: targetScanRunId },
+          where: { scanRunId: kriScanRunId },
           orderBy: { score: "desc" },
         })
       : Promise.resolve([]),
   ]);
+
+  const scanRun = latestNewsScan;
 
   const highRisk = topics.filter((t) => t.impactScore >= 8).length;
   const mediumRisk = topics.filter((t) => t.impactScore >= 5 && t.impactScore < 8).length;
