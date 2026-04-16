@@ -16,6 +16,16 @@ interface KriMeasurement {
   details?: string | null;
 }
 
+interface AcledCountryRow  { country: string;   events: number; fatalities: number; }
+interface AcledEventTypeRow { eventType: string; events: number; fatalities: number; }
+interface AcledDetails {
+  weekDate:        string;
+  totalEvents:     number;
+  totalFatalities: number;
+  byCountry:       AcledCountryRow[];
+  byEventType:     AcledEventTypeRow[];
+}
+
 interface NotamDetail {
   id:        string;
   fir:       string;
@@ -222,6 +232,95 @@ function NotamModal({ details, onClose }: { details: NotamDetail[]; onClose: () 
 }
 
 // ---------------------------------------------------------------------------
+// ACLED detail modal
+// ---------------------------------------------------------------------------
+
+function AcledModal({ details, onClose }: { details: AcledDetails; onClose: () => void }) {
+  const fmt = (n: number) => n.toLocaleString();
+  const weekLabel = details.weekDate
+    ? new Date(details.weekDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    : "";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Violence Events · Europe &amp; Central Asia (ACLED)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Week of {weekLabel}&nbsp;·&nbsp;
+              <span className="text-white">{fmt(details.totalEvents)}</span> events&nbsp;·&nbsp;
+              <span className="text-red-400">{fmt(details.totalFatalities)}</span> fatalities
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+          {/* Event types */}
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">By Event Type</h4>
+            <div className="space-y-1.5">
+              {details.byEventType.map((t) => {
+                const pct = details.totalEvents > 0 ? (t.events / details.totalEvents) * 100 : 0;
+                return (
+                  <div key={t.eventType}>
+                    <div className="flex items-center justify-between text-xs mb-0.5">
+                      <span className="text-gray-300">{t.eventType}</span>
+                      <span className="text-gray-500">
+                        {fmt(t.events)} events&nbsp;·&nbsp;
+                        <span className="text-red-400/80">{fmt(t.fatalities)} fatalities</span>
+                      </span>
+                    </div>
+                    <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500/70 rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Top countries */}
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Top Countries</h4>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-600 border-b border-gray-800">
+                  <th className="text-left pb-1.5 font-medium">Country</th>
+                  <th className="text-right pb-1.5 font-medium">Events</th>
+                  <th className="text-right pb-1.5 font-medium text-red-400/60">Fatalities</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-900">
+                {details.byCountry.map((c) => (
+                  <tr key={c.country} className="hover:bg-gray-900/50">
+                    <td className="py-1.5 text-gray-300">{c.country}</td>
+                    <td className="py-1.5 text-right text-gray-400">{fmt(c.events)}</td>
+                    <td className="py-1.5 text-right text-red-400/70">{fmt(c.fatalities)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // KRI card
 // ---------------------------------------------------------------------------
 
@@ -236,7 +335,9 @@ function KriCard({ kri, onDetail }: { kri: KriMeasurement; onDetail?: () => void
 
   let parsedDetails: unknown = null;
   try { if (kri.details) parsedDetails = JSON.parse(kri.details); } catch { /* ignore */ }
-  const hasDetails = Array.isArray(parsedDetails) && parsedDetails.length > 0;
+  const hasDetails =
+    (Array.isArray(parsedDetails) && parsedDetails.length > 0) ||
+    (parsedDetails !== null && typeof parsedDetails === "object" && "byCountry" in (parsedDetails as object));
 
   return (
     <div
@@ -276,17 +377,21 @@ function KriCard({ kri, onDetail }: { kri: KriMeasurement; onDetail?: () => void
 // ---------------------------------------------------------------------------
 
 export default function KriPanel({ measurements }: { measurements: KriMeasurement[] }) {
-  const [activeDetails, setActiveDetails] = useState<NotamDetail[] | null>(null);
+  const [activeNotam,  setActiveNotam]  = useState<NotamDetail[] | null>(null);
+  const [activeAcled,  setActiveAcled]  = useState<AcledDetails  | null>(null);
 
   if (measurements.length === 0) return null;
 
   function openDetails(kri: KriMeasurement) {
     if (!kri.details) return;
     try {
-      setActiveDetails(JSON.parse(kri.details) as NotamDetail[]);
-    } catch {
-      // ignore
-    }
+      const parsed = JSON.parse(kri.details);
+      if (Array.isArray(parsed)) {
+        setActiveNotam(parsed as NotamDetail[]);
+      } else if (parsed && typeof parsed === "object" && "byCountry" in parsed) {
+        setActiveAcled(parsed as AcledDetails);
+      }
+    } catch { /* ignore */ }
   }
 
   return (
@@ -306,11 +411,11 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
         </div>
       </div>
 
-      {activeDetails && (
-        <NotamModal
-          details={activeDetails}
-          onClose={() => setActiveDetails(null)}
-        />
+      {activeNotam && (
+        <NotamModal details={activeNotam} onClose={() => setActiveNotam(null)} />
+      )}
+      {activeAcled && (
+        <AcledModal details={activeAcled} onClose={() => setActiveAcled(null)} />
       )}
     </>
   );

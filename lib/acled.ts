@@ -152,7 +152,28 @@ async function findLatestFileUrl(cookie: string): Promise<{ url: string; weekDat
 // Parse Excel — returns total event count (sum across all rows / countries)
 // ---------------------------------------------------------------------------
 
-function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities: number } {
+export interface AcledCountryRow {
+  country:    string;
+  events:     number;
+  fatalities: number;
+}
+
+export interface AcledEventTypeRow {
+  eventType:  string;
+  events:     number;
+  fatalities: number;
+}
+
+export interface AcledDetails {
+  weekDate:        string;
+  fileUrl:         string;
+  totalEvents:     number;
+  totalFatalities: number;
+  byCountry:       AcledCountryRow[];    // top 20, sorted by events desc
+  byEventType:     AcledEventTypeRow[];  // all 6 types
+}
+
+function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities: number; breakdown: Omit<AcledDetails, "weekDate" | "fileUrl"> } {
   const wb   = XLSX.read(new Uint8Array(buffer), { type: "array" });
   const ws   = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: 0 });
@@ -161,28 +182,60 @@ function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities
 
   // Structure: one row per WEEK / COUNTRY / ADMIN1 / EVENT_TYPE / SUB_EVENT_TYPE
   // The file contains ALL weeks up to the file date — filter to the latest WEEK serial only.
-  const weekVals = rows.map((r) => Number(r["WEEK"] ?? 0)).filter(isFinite);
+  const weekVals   = rows.map((r) => Number(r["WEEK"] ?? 0)).filter(isFinite);
   const latestWeek = Math.max(...weekVals);
 
   let totalEvents = 0;
   let totalFatal  = 0;
   let filteredRows = 0;
 
+  const countryMap   = new Map<string, { events: number; fatalities: number }>();
+  const eventTypeMap = new Map<string, { events: number; fatalities: number }>();
+
   for (const row of rows) {
     if (Number(row["WEEK"]) !== latestWeek) continue;
     filteredRows++;
-    const events = Number(row["EVENTS"] ?? row["events"] ?? 0);
-    const fatal  = Number(row["FATALITIES"] ?? row["fatalities"] ?? 0);
+
+    const events    = Number(row["EVENTS"]     ?? row["events"]     ?? 0);
+    const fatal     = Number(row["FATALITIES"] ?? row["fatalities"] ?? 0);
+    const country   = String(row["COUNTRY"]    ?? row["country"]    ?? "Unknown");
+    const eventType = String(row["EVENT_TYPE"] ?? row["event_type"] ?? "Unknown");
+
     if (isFinite(events)) totalEvents += events;
     if (isFinite(fatal))  totalFatal  += fatal;
+
+    // Accumulate by country
+    const c = countryMap.get(country) ?? { events: 0, fatalities: 0 };
+    c.events     += isFinite(events) ? events : 0;
+    c.fatalities += isFinite(fatal)  ? fatal  : 0;
+    countryMap.set(country, c);
+
+    // Accumulate by event type
+    const t = eventTypeMap.get(eventType) ?? { events: 0, fatalities: 0 };
+    t.events     += isFinite(events) ? events : 0;
+    t.fatalities += isFinite(fatal)  ? fatal  : 0;
+    eventTypeMap.set(eventType, t);
   }
 
+  const byCountry: AcledCountryRow[] = [...countryMap.entries()]
+    .map(([country, v]) => ({ country, ...v }))
+    .sort((a, b) => b.events - a.events)
+    .slice(0, 20);
+
+  const byEventType: AcledEventTypeRow[] = [...eventTypeMap.entries()]
+    .map(([eventType, v]) => ({ eventType, ...v }))
+    .sort((a, b) => b.events - a.events);
+
   console.info(
-    `[ACLED] ${rows.length} rows total, ${filteredRows} rows for week serial ${latestWeek}` +
+    `[ACLED] ${rows.length} rows total, ${filteredRows} for week serial ${latestWeek}` +
     ` → ${totalEvents} events, ${totalFatal} fatalities`
   );
 
-  return { totalEvents, fatalities: totalFatal };
+  return {
+    totalEvents,
+    fatalities: totalFatal,
+    breakdown: { totalEvents, totalFatalities: totalFatal, byCountry, byEventType },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +256,7 @@ export async function measureAcledKri(): Promise<KriResult> {
     throw new Error(`Failed to download ACLED file (${fileRes.status}): ${fileUrl}`);
   }
   const buffer = await fileRes.arrayBuffer();
-  const { totalEvents } = parseAcledExcel(buffer);
+  const { totalEvents, breakdown } = parseAcledExcel(buffer);
 
   // 3. Load history from DB — last 35 KRI measurements for this key
   const history = await prisma.kriMeasurement.findMany({
@@ -274,6 +327,6 @@ export async function measureAcledKri(): Promise<KriResult> {
     trend,
     trendPct,
     sparkline,
-    details: { weekDate, fileUrl },
+    details: { weekDate, fileUrl, ...breakdown } satisfies AcledDetails,
   };
 }
