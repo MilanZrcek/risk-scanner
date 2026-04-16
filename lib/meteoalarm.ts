@@ -50,7 +50,6 @@ const EU_SLUGS: [string, string][] = [
 const SEVERITY_WEIGHT: Record<string, number> = {
   extreme: 4,
   severe:  2,
-  moderate: 1,
   minor:   0,
 };
 
@@ -66,7 +65,6 @@ export interface MeteoAlarmDetails {
   totalWarnings: number;
   redCount:      number;   // extreme
   orangeCount:   number;   // severe
-  yellowCount:   number;   // moderate
   warnings:      MeteoWarning[];
 }
 
@@ -83,13 +81,12 @@ function parseCountryFeed(countryCode: string, xml: string): MeteoWarning[] {
     const severity = extractTag(entry, "cap:severity").toLowerCase();
     if (!severity || severity === "minor" || severity === "unknown") continue;
 
+    if (severity !== "extreme" && severity !== "severe") continue;
     warnings.push({
       country:  countryCode,
       area:     extractTag(entry, "cap:areaDesc"),
       event:    extractTag(entry, "cap:event"),
-      severity: severity === "extreme" ? "extreme"
-               : severity === "severe" ? "severe"
-               : "moderate",
+      severity: severity === "extreme" ? "extreme" : "severe",
       sent:     extractTag(entry, "cap:sent"),
     });
   }
@@ -127,11 +124,10 @@ export async function measureMeteoAlarmKri(): Promise<KriResult> {
 
   const redCount    = warnings.filter((w) => w.severity === "extreme").length;
   const orangeCount = warnings.filter((w) => w.severity === "severe").length;
-  const yellowCount = warnings.filter((w) => w.severity === "moderate").length;
   const volume7d    = warnings.length;
 
-  // Weighted score: 5 extreme warnings → score 100
-  const weightedScore = redCount * 4 + orangeCount * 2 + yellowCount;
+  // Weighted score: 5 red + 10 orange → score 100
+  const weightedScore = redCount * 4 + orangeCount * 2;
   const REFERENCE_SCORE = 20;
   const score = Math.min(100, Math.round((weightedScore / REFERENCE_SCORE) * 100));
 
@@ -159,7 +155,6 @@ export async function measureMeteoAlarmKri(): Promise<KriResult> {
     totalWarnings: volume7d,
     redCount,
     orangeCount,
-    yellowCount,
     warnings,
   };
 

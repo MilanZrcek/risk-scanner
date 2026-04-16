@@ -30,25 +30,33 @@ interface MeteoWarning {
   country:  string;
   area:     string;
   event:    string;
-  severity: "extreme" | "severe" | "moderate";
+  severity: "extreme" | "severe";
   sent:     string;
 }
 interface MeteoAlarmDetails {
   totalWarnings: number;
   redCount:      number;
   orangeCount:   number;
-  yellowCount:   number;
   warnings:      MeteoWarning[];
 }
 
 interface EfiCityData {
-  code:      string;
-  name:      string;
-  efi:       number;
-  efiTemp:   number;
-  efiPrecip: number;
-  efiWind:   number;
-  forecast:  number[];
+  code:       string;
+  name:       string;
+  efi:        number;
+  efiTemp:    number;
+  efiPrecip:  number;
+  efiWind:    number;
+  forecast:   number[];
+  tempMax:    number | null;
+  tempMean:   number;
+  tempZ:      number;
+  precipMax:  number | null;
+  precipMean: number;
+  precipZ:    number;
+  windMax:    number | null;
+  windMean:   number;
+  windZ:      number;
 }
 interface EfiDetails {
   cities:     EfiCityData[];
@@ -356,9 +364,8 @@ function AcledModal({ details, onClose }: { details: AcledDetails; onClose: () =
 // ---------------------------------------------------------------------------
 
 const SEVERITY_STYLE: Record<string, { label: string; color: string; dot: string }> = {
-  extreme: { label: "Red / Extreme",    color: "text-red-400 bg-red-500/10 border-red-500/30",      dot: "bg-red-500"    },
-  severe:  { label: "Orange / Severe",  color: "text-orange-400 bg-orange-500/10 border-orange-500/30", dot: "bg-orange-500" },
-  moderate:{ label: "Yellow / Moderate",color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30", dot: "bg-yellow-400" },
+  extreme: { label: "Red",    color: "text-red-400 bg-red-500/10 border-red-500/30",          dot: "bg-red-500"    },
+  severe:  { label: "Orange", color: "text-orange-400 bg-orange-500/10 border-orange-500/30", dot: "bg-orange-500" },
 };
 
 function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onClose: () => void }) {
@@ -371,7 +378,6 @@ function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onC
             <p className="text-xs text-gray-500 mt-0.5">
               <span className="text-red-400 font-medium">{details.redCount} red</span>
               &nbsp;·&nbsp;<span className="text-orange-400">{details.orangeCount} orange</span>
-              &nbsp;·&nbsp;<span className="text-yellow-400">{details.yellowCount} yellow</span>
               &nbsp;·&nbsp;{details.totalWarnings} total active
             </p>
           </div>
@@ -381,7 +387,7 @@ function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onC
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-3 space-y-1.5">
           {details.warnings.map((w, i) => {
-            const s = SEVERITY_STYLE[w.severity] ?? SEVERITY_STYLE.moderate;
+            const s = SEVERITY_STYLE[w.severity] ?? SEVERITY_STYLE.severe;
             return (
               <div key={i} className={`rounded-lg border px-3 py-2 flex items-start gap-3 ${s.color}`}>
                 <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
@@ -399,7 +405,7 @@ function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onC
             );
           })}
           {details.warnings.length === 0 && (
-            <p className="text-xs text-gray-500 py-4 text-center">No active moderate–extreme warnings in EU</p>
+            <p className="text-xs text-gray-500 py-4 text-center">No active red or orange warnings in EU</p>
           )}
         </div>
       </div>
@@ -410,18 +416,6 @@ function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onC
 // ---------------------------------------------------------------------------
 // EFI detail modal
 // ---------------------------------------------------------------------------
-
-function EfiBar({ value, color }: { value: number; color: string }) {
-  return (
-    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden w-full">
-      <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.round(value * 100)}%` }} />
-    </div>
-  );
-}
-
-function efiColor(v: number): string {
-  return v >= 0.7 ? "bg-red-500" : v >= 0.4 ? "bg-orange-500" : v >= 0.2 ? "bg-yellow-400" : "bg-green-500";
-}
 
 function MiniSparkline({ data }: { data: number[] }) {
   if (data.length < 2) return <div className="h-6 w-16 bg-gray-800 rounded opacity-30" />;
@@ -435,6 +429,42 @@ function MiniSparkline({ data }: { data: number[] }) {
   );
 }
 
+function zColor(z: number) {
+  const abs = Math.abs(z);
+  return abs >= 3 ? "text-red-400" : abs >= 2 ? "text-orange-400" : abs >= 1 ? "text-yellow-400" : "text-gray-500";
+}
+
+function EfiRow({
+  label, unit,
+  peak, avg, z,
+}: {
+  label: string; unit: string;
+  peak: number | null; avg: number; z: number;
+}) {
+  const sigmaColor = zColor(z);
+  const barPct = Math.min(100, Math.round((Math.abs(z) / 3) * 100));
+  const barColor = Math.abs(z) >= 3 ? "bg-red-500" : Math.abs(z) >= 2 ? "bg-orange-500" : Math.abs(z) >= 1 ? "bg-yellow-400" : "bg-green-500";
+  return (
+    <div className="flex items-center gap-3 text-xs">
+      <span className="text-gray-500 w-24 shrink-0">{label}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-0.5">
+          <span className="text-gray-300">
+            {peak !== null ? `${peak}${unit}` : "—"}
+            <span className="text-gray-600 ml-1">(avg {avg}{unit})</span>
+          </span>
+          <span className={`font-semibold ${sigmaColor}`}>
+            {z > 0 ? "+" : ""}{z}σ
+          </span>
+        </div>
+        <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${barPct}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EfiModal({ details, onClose }: { details: EfiDetails; onClose: () => void }) {
   const fetchDate = details.fetchedAt
     ? new Date(details.fetchedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -445,9 +475,9 @@ function EfiModal({ details, onClose }: { details: EfiDetails; onClose: () => vo
       <div className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <div>
-            <h3 className="text-white font-semibold text-sm">Extreme Weather · Key Cities (EFI)</h3>
+            <h3 className="text-white font-semibold text-sm">Extreme Weather · Key Cities</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              7-day forecast via ECMWF IFS (Open-Meteo) · {fetchDate}
+              Peak forecast vs 30-day baseline · {fetchDate}
               {details.maxEfi > 0.1 && (
                 <>&nbsp;·&nbsp;<span className="text-orange-400">highest: {details.maxEfiCity}</span></>
               )}
@@ -458,32 +488,29 @@ function EfiModal({ details, onClose }: { details: EfiDetails; onClose: () => vo
           </button>
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-          {details.cities.map((city) => (
-            <div key={city.code} className="bg-gray-900/60 rounded-xl p-3 border border-gray-800">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-white text-sm font-semibold">{city.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${city.efi >= 0.7 ? "text-red-400" : city.efi >= 0.4 ? "text-orange-400" : city.efi >= 0.2 ? "text-yellow-400" : "text-green-400"}`}>
-                    {Math.round(city.efi * 100)}/100
-                  </span>
-                  <MiniSparkline data={city.forecast} />
+          {details.cities.map((city) => {
+            const efiPct = Math.round(city.efi * 100);
+            const efiCol = efiPct >= 70 ? "text-red-400" : efiPct >= 40 ? "text-orange-400" : efiPct >= 20 ? "text-yellow-400" : "text-green-400";
+            return (
+              <div key={city.code} className="bg-gray-900/60 rounded-xl p-3 border border-gray-800">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-white text-sm font-semibold">{city.name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs font-bold ${efiCol}`}>{efiPct}/100</span>
+                    <MiniSparkline data={city.forecast} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <EfiRow label="Temperature"   unit="°C"   peak={city.tempMax}   avg={city.tempMean}   z={city.tempZ}   />
+                  <EfiRow label="Precipitation"  unit="mm"   peak={city.precipMax} avg={city.precipMean} z={city.precipZ} />
+                  <EfiRow label="Wind speed"     unit=" km/h" peak={city.windMax}  avg={city.windMean}   z={city.windZ}   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                {[
-                  { label: "Temperature", value: city.efiTemp },
-                  { label: "Precipitation", value: city.efiPrecip },
-                  { label: "Wind",          value: city.efiWind },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 w-24 shrink-0">{label}</span>
-                    <EfiBar value={value} color={efiColor(value)} />
-                    <span className="text-xs text-gray-500 w-8 text-right">{Math.round(value * 100)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
+          <p className="text-xs text-gray-600 pb-1 text-center">
+            σ = standard deviations from 30-day baseline · bars show deviation up to 3σ
+          </p>
         </div>
       </div>
     </div>

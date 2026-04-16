@@ -37,10 +37,20 @@ export interface EfiCityData {
   code:      string;
   name:      string;
   efi:       number;       // 0–1, max EFI over next 7 days
-  efiTemp:   number;       // temperature component (current day)
+  efiTemp:   number;       // temperature component
   efiPrecip: number;       // precipitation component
   efiWind:   number;       // wind component
   forecast:  number[];     // 7-day EFI trend (one value per day)
+  // Actual values for interpretability
+  tempMax:    number | null;  // peak forecast °C over 7 days
+  tempMean:   number;         // 30-day baseline mean °C
+  tempZ:      number;         // std deviations above baseline
+  precipMax:  number | null;  // peak forecast mm over 7 days
+  precipMean: number;         // 30-day baseline mean mm
+  precipZ:    number;
+  windMax:    number | null;  // peak forecast km/h over 7 days
+  windMean:   number;         // 30-day baseline mean km/h
+  windZ:      number;
 }
 
 export interface EfiDetails {
@@ -116,14 +126,42 @@ async function fetchCity(city: typeof CITIES[number]): Promise<EfiCityData> {
 
   const efi = Math.max(...forecast);
 
+  // Actual peak forecast values for interpretability
+  const validTemp   = fc_temp  .filter((v): v is number => v !== null && isFinite(v));
+  const validPrecip = fc_precip.filter((v): v is number => v !== null && isFinite(v));
+  const validWind   = fc_wind  .filter((v): v is number => v !== null && isFinite(v));
+
+  const tempMax   = validTemp  .length > 0 ? Math.max(...validTemp)   : null;
+  const precipMax = validPrecip.length > 0 ? Math.max(...validPrecip) : null;
+  const windMax   = validWind  .length > 0 ? Math.max(...validWind)   : null;
+
+  const blMeanTemp   = mean(bl_temp);
+  const blMeanPrecip = mean(bl_precip);
+  const blMeanWind   = mean(bl_wind);
+
+  function zScore(baselineVals: number[], peakVal: number | null): number {
+    if (peakVal === null) return 0;
+    const s = std(baselineVals);
+    return Math.round(((peakVal - mean(baselineVals)) / s) * 10) / 10;
+  }
+
   return {
-    code:      city.code,
-    name:      city.name,
+    code:       city.code,
+    name:       city.name,
     efi,
-    efiTemp:   efiScore(bl_temp,   fc_temp[0]),
-    efiPrecip: efiScore(bl_precip, fc_precip[0]),
-    efiWind:   efiScore(bl_wind,   fc_wind[0]),
+    efiTemp:    efiScore(bl_temp,   fc_temp[0]),
+    efiPrecip:  efiScore(bl_precip, fc_precip[0]),
+    efiWind:    efiScore(bl_wind,   fc_wind[0]),
     forecast,
+    tempMax,
+    tempMean:   Math.round(blMeanTemp   * 10) / 10,
+    tempZ:      zScore(bl_temp,   tempMax),
+    precipMax:  precipMax !== null ? Math.round(precipMax * 10) / 10 : null,
+    precipMean: Math.round(blMeanPrecip * 10) / 10,
+    precipZ:    zScore(bl_precip, precipMax),
+    windMax:    windMax   !== null ? Math.round(windMax   * 10) / 10 : null,
+    windMean:   Math.round(blMeanWind   * 10) / 10,
+    windZ:      zScore(bl_wind,   windMax),
   };
 }
 
