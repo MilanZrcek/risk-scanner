@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ topics: [], scanRun: null, scanRuns: [] });
     }
 
-    const [topics, scanRun, scanRuns] = await Promise.all([
+    const [topics, scanRun, scanRuns, kriMeasurements] = await Promise.all([
       prisma.riskTopic.findMany({
         where: {
           scanRunId: targetScanRunId,
@@ -37,9 +37,18 @@ export async function GET(req: NextRequest) {
         take: 10,
         select: { id: true, startedAt: true, topicsFound: true },
       }),
+      prisma.kriMeasurement.findMany({
+        where: { scanRunId: targetScanRunId },
+        select: {
+          id: true, key: true, name: true, category: true,
+          score: true, trend: true, trendPct: true,
+          volume7d: true, volume7dPrev: true, avgDaily: true,
+          sparkline: true, details: true,
+        },
+      }),
     ]);
 
-    return NextResponse.json({ topics, scanRun, scanRuns });
+    return NextResponse.json({ topics, scanRun, scanRuns, kriMeasurements });
   } catch (error) {
     console.error("Failed to fetch risks:", error);
     return NextResponse.json(
