@@ -35,6 +35,7 @@ model KriMeasurement {
   trend       String   // rising | stable | falling
   trendPct    Float    // % change vs previous 7 days
   sparkline   String   @db.Text // JSON array of last 30 daily volumes
+  details     String?  @db.Text // JSON: KRI-specific detail data (e.g. NOTAM list)
   createdAt   DateTime @default(now())
 
   @@index([scanRunId])
