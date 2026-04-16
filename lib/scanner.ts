@@ -13,18 +13,20 @@ import { measureEfiKri } from "./efi";
 // KRI-only scan — no Claude API, safe to run frequently
 // ---------------------------------------------------------------------------
 
+// runKriScan: does NOT include NOTAM — NOTAM runs 25 API calls per scan and
+// is capped at 1 000 req/month on the free tier. Running it only in the
+// 06:00 full scan keeps usage at 25/day = ~750/month (safe under limit).
 export async function runKriScan(): Promise<{ scanRunId: string }> {
   const scanRun = await prisma.scanRun.create({
     data: { status: "pending" },
   });
 
   try {
-    const [kriResults, acledKri, reliefwebKris, wmKri, notamKri, meteoKri, efiKri] = await Promise.allSettled([
-      process.env.SKIP_GDELT === "true"   ? Promise.resolve([])   : measureKRIs(),
-      process.env.ACLED_EMAIL             ? measureAcledKri()      : Promise.resolve(null),
-      process.env.RELIEFWEB_APPNAME       ? measureReliefWebKris() : Promise.resolve([]),
+    const [kriResults, acledKri, reliefwebKris, wmKri, meteoKri, efiKri] = await Promise.allSettled([
+      process.env.SKIP_GDELT === "true"   ? Promise.resolve([])    : measureKRIs(),
+      process.env.ACLED_EMAIL             ? measureAcledKri()       : Promise.resolve(null),
+      process.env.RELIEFWEB_APPNAME       ? measureReliefWebKris()  : Promise.resolve([]),
       process.env.WORLDMONITOR_API_KEY    ? measureWorldMonitorKri(): Promise.resolve(null),
-      process.env.RAPIDAPI_KEY            ? measureNotamKri()      : Promise.resolve(null),
       measureMeteoAlarmKri(),
       measureEfiKri(),
     ]);
@@ -34,7 +36,6 @@ export async function runKriScan(): Promise<{ scanRunId: string }> {
       ...(acledKri.status      === "fulfilled" && acledKri.value    ? [acledKri.value]   : []),
       ...(reliefwebKris.status === "fulfilled" ? reliefwebKris.value                      : []),
       ...(wmKri.status         === "fulfilled" && wmKri.value       ? [wmKri.value]      : []),
-      ...(notamKri.status      === "fulfilled" && notamKri.value    ? [notamKri.value]   : []),
       ...(meteoKri.status      === "fulfilled" ? [meteoKri.value]                        : []),
       ...(efiKri.status        === "fulfilled" ? [efiKri.value]                          : []),
     ];
@@ -42,7 +43,6 @@ export async function runKriScan(): Promise<{ scanRunId: string }> {
     if (acledKri.status      === "rejected") console.warn("ACLED KRI failed:",         acledKri.reason);
     if (reliefwebKris.status === "rejected") console.warn("ReliefWeb KRI failed:",     reliefwebKris.reason);
     if (wmKri.status         === "rejected") console.warn("World Monitor KRI failed:", wmKri.reason);
-    if (notamKri.status      === "rejected") console.warn("NOTAM KRI failed:",         notamKri.reason);
     if (meteoKri.status      === "rejected") console.warn("MeteoAlarm KRI failed:",    meteoKri.reason);
     if (efiKri.status        === "rejected") console.warn("EFI KRI failed:",           efiKri.reason);
 
