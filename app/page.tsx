@@ -49,7 +49,11 @@ async function Dashboard({ searchParams }: PageProps) {
       distinct:  ["key"],
       orderBy:   [{ key: "asc" }, { createdAt: "desc" }],
       where:     { key: { not: "reliefweb_crises" } },
-    }).then((rows) => rows.sort((a, b) => b.score - a.score)),
+    }).then((rows) =>
+      rows.sort((a, b) =>
+        a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+      )
+    ),
   ]);
 
   const scanRun = latestNewsScan;

@@ -47,7 +47,11 @@ export async function GET(req: NextRequest) {
           volume7d: true, volume7dPrev: true, avgDaily: true,
           sparkline: true, details: true,
         },
-      }).then((rows) => rows.sort((a, b) => b.score - a.score)),
+      }).then((rows) =>
+        rows.sort((a, b) =>
+          a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+        )
+      ),
     ]);
 
     return NextResponse.json({ topics, scanRun, scanRuns, kriMeasurements });
