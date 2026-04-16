@@ -48,6 +48,7 @@ async function Dashboard({ searchParams }: PageProps) {
     prisma.kriMeasurement.findMany({
       distinct:  ["key"],
       orderBy:   [{ key: "asc" }, { createdAt: "desc" }],
+      where:     { key: { not: "reliefweb_crises" } },
     }).then((rows) => rows.sort((a, b) => b.score - a.score)),
   ]);
 

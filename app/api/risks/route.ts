@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
       prisma.kriMeasurement.findMany({
         distinct: ["key"],
         orderBy:  [{ key: "asc" }, { createdAt: "desc" }],
+        where:    { key: { not: "reliefweb_crises" } },
         select: {
           id: true, key: true, name: true, category: true,
           score: true, trend: true, trendPct: true,

@@ -130,15 +130,6 @@ async function fetchDisasters(
 // Aggregation helpers
 // ---------------------------------------------------------------------------
 
-function countByDay(disasters: RwDisaster[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const d of disasters) {
-    const day = d.fields.date.created.split("T")[0];
-    map.set(day, (map.get(day) ?? 0) + 1);
-  }
-  return map;
-}
-
 function severityByDay(disasters: RwDisaster[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const d of disasters) {
@@ -190,49 +181,6 @@ function buildDetails(disasters: RwDisaster[], windowStart: Date): ReliefWebDeta
     })
     .sort((a, b) => b.severity - a.severity || a.date.localeCompare(b.date) * -1);
   return { disasters: details, fetchedAt: new Date().toISOString() };
-}
-
-function buildCrisisCountKri(disasters: RwDisaster[], today: Date): KriResult & { details: ReliefWebDetails } {
-  const byDay = countByDay(disasters);
-
-  const window7Start = new Date(today);
-  window7Start.setDate(window7Start.getDate() - 7);
-
-  const prevStart = new Date(today);
-  prevStart.setDate(prevStart.getDate() - 14);
-
-  const sparklineStart = new Date(today);
-  sparklineStart.setDate(sparklineStart.getDate() - 30);
-
-  const volume7d     = sumRange(byDay, window7Start, 7);
-  const volume7dPrev = sumRange(byDay, prevStart,    7);
-  const sparkline    = buildSparkline(byDay, sparklineStart, 30);
-  const avgDaily     = sparkline.reduce((s, v) => s + v, 0) / sparkline.length;
-
-  const trendPct =
-    volume7dPrev > 0
-      ? Math.round(((volume7d - volume7dPrev) / volume7dPrev) * 100)
-      : 0;
-  const trend: KriResult["trend"] =
-    trendPct >= 10 ? "rising" : trendPct <= -10 ? "falling" : "stable";
-
-  // Reference: 15 new crises/7 days = score 100
-  const REFERENCE = 15;
-  const score = Math.min(100, Math.round((volume7d / REFERENCE) * 100));
-
-  return {
-    key:          "reliefweb_crises",
-    name:         "Humanitarian Crises · New (ReliefWeb)",
-    category:     "Geopolitical",
-    volume7d,
-    volume7dPrev,
-    avgDaily:     Math.round(avgDaily * 10) / 10,
-    score,
-    trend,
-    trendPct,
-    sparkline,
-    details:      buildDetails(disasters, window7Start),
-  };
 }
 
 function buildSeverityIndexKri(disasters: RwDisaster[], today: Date): KriResult & { details: ReliefWebDetails } {
@@ -296,7 +244,6 @@ export async function measureReliefWebKris(): Promise<KriResult[]> {
   const disasters = await fetchDisasters(appname, formatDate(fetchFrom), formatDate(today));
 
   return [
-    buildCrisisCountKri(disasters, today),
     buildSeverityIndexKri(disasters, today),
   ];
 }
