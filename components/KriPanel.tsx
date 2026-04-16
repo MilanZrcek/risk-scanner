@@ -78,6 +78,20 @@ interface EfiDetails {
   fetchedAt:  string;
 }
 
+interface VixDataPoint {
+  date:  string;
+  value: number;
+}
+interface FredVixDetails {
+  current:     number;
+  avg7d:       number;
+  avg7dPrev:   number;
+  min30d:      number;
+  max30d:      number;
+  dataPoints:  VixDataPoint[];
+  fetchedAt:   string;
+}
+
 interface NotamDetail {
   id:        string;
   fir:       string;
@@ -95,12 +109,12 @@ interface NotamDetail {
 const VOLUME_LABELS: Record<string, string> = {
   notam_restrictions:      "active restrictions",
   acled_violence:          "events",
-  reliefweb_crises:        "new crises",
   reliefweb_severity:      "severity points",
   worldmonitor_cii:        "CII score",
   opensky_aviation_stress: "emergency squawks",
   meteoalarm_warnings:     "active alerts",
   weather_efi:             "EFI score",
+  fred_vix:                "VIX (7d avg)",
 };
 
 function volumeLabel(key: string): string {
@@ -601,6 +615,108 @@ function EfiModal({ details, onClose }: { details: EfiDetails; onClose: () => vo
 }
 
 // ---------------------------------------------------------------------------
+// FRED VIX detail modal
+// ---------------------------------------------------------------------------
+
+function vixLevelLabel(v: number): { label: string; color: string } {
+  if (v < 15) return { label: "Low",      color: "text-green-400" };
+  if (v < 20) return { label: "Normal",   color: "text-gray-400"  };
+  if (v < 30) return { label: "Elevated", color: "text-yellow-400"};
+  if (v < 40) return { label: "High",     color: "text-orange-400"};
+  return             { label: "Extreme",  color: "text-red-400"   };
+}
+
+function FredVixModal({ details, onClose }: { details: FredVixDetails; onClose: () => void }) {
+  const fetchDate = details.fetchedAt
+    ? new Date(details.fetchedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
+  const { label, color } = vixLevelLabel(details.current);
+
+  // Mini sparkline for the 30-day VIX chart
+  const values = details.dataPoints.map((p) => p.value);
+  const maxVal = Math.max(...values, 1);
+  const minVal = Math.min(...values);
+  const range  = maxVal - minVal || 1;
+  const W = 480, H = 60;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W;
+    const y = H - ((v - minVal) / range) * H;
+    return `${x},${y}`;
+  }).join(" L ");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Market Volatility · VIX (CBOE via FRED)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Last 30 trading days · {fetchDate}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+          {/* Current value callout */}
+          <div className="flex items-center gap-6">
+            <div>
+              <div className={`text-4xl font-bold ${color}`}>{details.current}</div>
+              <div className={`text-xs font-semibold mt-0.5 ${color}`}>{label}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+              <span className="text-gray-500">7-day avg</span>
+              <span className="text-gray-300 text-right">{details.avg7d}</span>
+              <span className="text-gray-500">Prior 7-day avg</span>
+              <span className="text-gray-300 text-right">{details.avg7dPrev}</span>
+              <span className="text-gray-500">30-day min</span>
+              <span className="text-gray-300 text-right">{details.min30d}</span>
+              <span className="text-gray-500">30-day max</span>
+              <span className="text-gray-300 text-right">{details.max30d}</span>
+            </div>
+          </div>
+
+          {/* 30-day chart */}
+          <div className="bg-gray-900/60 rounded-xl p-3 border border-gray-800">
+            <p className="text-xs text-gray-600 mb-2">30 trading days</p>
+            <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="vixGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d={`M 0,${H} L ${pts} L ${W},${H} Z`} fill="url(#vixGrad)" />
+              <path d={`M ${pts}`} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div className="flex justify-between text-xs text-gray-700 mt-1">
+              <span>{details.dataPoints[0]?.date}</span>
+              <span>{details.dataPoints[details.dataPoints.length - 1]?.date}</span>
+            </div>
+          </div>
+
+          {/* Scale reference */}
+          <div className="grid grid-cols-5 gap-1 text-xs text-center">
+            {[
+              { range: "< 15",  label: "Low",      color: "bg-green-500/20 text-green-400  border-green-500/30"  },
+              { range: "15–20", label: "Normal",   color: "bg-gray-700/40  text-gray-400   border-gray-600/30"   },
+              { range: "20–30", label: "Elevated", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"},
+              { range: "30–40", label: "High",     color: "bg-orange-500/20 text-orange-400 border-orange-500/30"},
+              { range: "> 40",  label: "Extreme",  color: "bg-red-500/20   text-red-400    border-red-500/30"    },
+            ].map((s) => (
+              <div key={s.label} className={`rounded border px-1 py-1.5 ${s.color}`}>
+                <div className="font-medium">{s.label}</div>
+                <div className="text-gray-600 mt-0.5">{s.range}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // KRI card
 // ---------------------------------------------------------------------------
 
@@ -618,10 +734,11 @@ function KriCard({ kri, onDetail }: { kri: KriMeasurement; onDetail?: () => void
   const hasDetails =
     (Array.isArray(parsedDetails) && parsedDetails.length > 0) ||
     (parsedDetails !== null && typeof parsedDetails === "object" && (
-      "byCountry" in (parsedDetails as object) ||
-      "disasters" in (parsedDetails as object) ||
-      "warnings"  in (parsedDetails as object) ||
-      "cities"    in (parsedDetails as object)
+      "byCountry"   in (parsedDetails as object) ||
+      "disasters"   in (parsedDetails as object) ||
+      "warnings"    in (parsedDetails as object) ||
+      "cities"      in (parsedDetails as object) ||
+      "dataPoints"  in (parsedDetails as object)
     ));
 
   return (
@@ -667,6 +784,7 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
   const [activeReliefWeb, setActiveReliefWeb] = useState<ReliefWebDetails      | null>(null);
   const [activeMeteo,     setActiveMeteo]     = useState<MeteoAlarmDetails     | null>(null);
   const [activeEfi,       setActiveEfi]       = useState<EfiDetails            | null>(null);
+  const [activeFredVix,   setActiveFredVix]   = useState<FredVixDetails        | null>(null);
 
   if (measurements.length === 0) return null;
 
@@ -685,6 +803,8 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
         setActiveMeteo(parsed as MeteoAlarmDetails);
       } else if ("cities" in parsed) {
         setActiveEfi(parsed as EfiDetails);
+      } else if ("dataPoints" in parsed) {
+        setActiveFredVix(parsed as FredVixDetails);
       }
     } catch { /* ignore */ }
   }
@@ -711,6 +831,7 @@ export default function KriPanel({ measurements }: { measurements: KriMeasuremen
       {activeReliefWeb && <ReliefWebModal  details={activeReliefWeb} onClose={() => setActiveReliefWeb(null)} />}
       {activeMeteo     && <MeteoAlarmModal details={activeMeteo}     onClose={() => setActiveMeteo(null)}     />}
       {activeEfi       && <EfiModal        details={activeEfi}       onClose={() => setActiveEfi(null)}       />}
+      {activeFredVix   && <FredVixModal    details={activeFredVix}   onClose={() => setActiveFredVix(null)}   />}
     </>
   );
 }

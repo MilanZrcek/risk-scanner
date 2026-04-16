@@ -8,6 +8,7 @@ import { measureWorldMonitorKri } from "./worldmonitor";
 import { measureNotamKri } from "./notam";
 import { measureMeteoAlarmKri } from "./meteoalarm";
 import { measureEfiKri } from "./efi";
+import { measureFredVixKri } from "./fred";
 
 // ---------------------------------------------------------------------------
 // KRI-only scan — no Claude API, safe to run frequently
@@ -21,7 +22,7 @@ export async function runKriScan(): Promise<{ scanRunId: string }> {
   });
 
   try {
-    const [kriResults, acledKri, reliefwebKris, wmKri, notamKri, meteoKri, efiKri] = await Promise.allSettled([
+    const [kriResults, acledKri, reliefwebKris, wmKri, notamKri, meteoKri, efiKri, fredVixKri] = await Promise.allSettled([
       process.env.SKIP_GDELT === "true"   ? Promise.resolve([])    : measureKRIs(),
       process.env.ACLED_EMAIL             ? measureAcledKri()       : Promise.resolve(null),
       process.env.RELIEFWEB_APPNAME       ? measureReliefWebKris()  : Promise.resolve([]),
@@ -29,16 +30,18 @@ export async function runKriScan(): Promise<{ scanRunId: string }> {
       process.env.RAPIDAPI_KEY            ? measureNotamKri()       : Promise.resolve(null),
       measureMeteoAlarmKri(),
       measureEfiKri(),
+      process.env.FRED_API_KEY            ? measureFredVixKri()     : Promise.resolve(null),
     ]);
 
     const allKriResults = [
-      ...(kriResults.status    === "fulfilled" ? kriResults.value                         : []),
-      ...(acledKri.status      === "fulfilled" && acledKri.value    ? [acledKri.value]   : []),
-      ...(reliefwebKris.status === "fulfilled" ? reliefwebKris.value                      : []),
-      ...(wmKri.status         === "fulfilled" && wmKri.value       ? [wmKri.value]      : []),
-      ...(notamKri.status      === "fulfilled" && notamKri.value    ? [notamKri.value]   : []),
-      ...(meteoKri.status      === "fulfilled" ? [meteoKri.value]                        : []),
-      ...(efiKri.status        === "fulfilled" ? [efiKri.value]                          : []),
+      ...(kriResults.status    === "fulfilled" ? kriResults.value                               : []),
+      ...(acledKri.status      === "fulfilled" && acledKri.value    ? [acledKri.value]         : []),
+      ...(reliefwebKris.status === "fulfilled" ? reliefwebKris.value                            : []),
+      ...(wmKri.status         === "fulfilled" && wmKri.value       ? [wmKri.value]            : []),
+      ...(notamKri.status      === "fulfilled" && notamKri.value    ? [notamKri.value]         : []),
+      ...(meteoKri.status      === "fulfilled" ? [meteoKri.value]                              : []),
+      ...(efiKri.status        === "fulfilled" ? [efiKri.value]                                : []),
+      ...(fredVixKri.status    === "fulfilled" && fredVixKri.value  ? [fredVixKri.value]       : []),
     ];
 
     if (acledKri.status      === "rejected") console.warn("ACLED KRI failed:",         acledKri.reason);
@@ -47,6 +50,7 @@ export async function runKriScan(): Promise<{ scanRunId: string }> {
     if (notamKri.status      === "rejected") console.warn("NOTAM KRI failed:",         notamKri.reason);
     if (meteoKri.status      === "rejected") console.warn("MeteoAlarm KRI failed:",    meteoKri.reason);
     if (efiKri.status        === "rejected") console.warn("EFI KRI failed:",           efiKri.reason);
+    if (fredVixKri.status    === "rejected") console.warn("FRED VIX KRI failed:",      fredVixKri.reason);
 
     await prisma.$transaction(
       allKriResults.map((kri) =>
