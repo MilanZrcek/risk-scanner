@@ -35,7 +35,7 @@ export async function runKriScan(): Promise<{ scanRunId: string }> {
 
     const allKriResults = [
       ...(kriResults.status    === "fulfilled" ? kriResults.value                               : []),
-      ...(acledKri.status      === "fulfilled" && acledKri.value    ? [acledKri.value]         : []),
+      ...(acledKri.status      === "fulfilled" && acledKri.value    ? acledKri.value           : []),
       ...(reliefwebKris.status === "fulfilled" ? reliefwebKris.value                            : []),
       ...(wmKri.status         === "fulfilled" && wmKri.value       ? [wmKri.value]            : []),
       ...(notamKri.status      === "fulfilled" && notamKri.value    ? [notamKri.value]         : []),

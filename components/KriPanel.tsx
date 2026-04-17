@@ -109,6 +109,7 @@ interface NotamDetail {
 const VOLUME_LABELS: Record<string, string> = {
   notam_restrictions:      "active restrictions",
   acled_violence:          "events",
+  acled_disorder:          "events",
   reliefweb_severity:      "severity points",
   worldmonitor_cii:        "CII score",
   opensky_aviation_stress: "emergency squawks",

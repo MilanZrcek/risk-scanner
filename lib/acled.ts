@@ -183,7 +183,22 @@ export interface AcledDetails {
   byEventType:     AcledEventTypeRow[];  // all 6 types
 }
 
-function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities: number; breakdown: Omit<AcledDetails, "weekDate" | "fileUrl"> } {
+// Event type sets for each KRI
+const VIOLENCE_EVENT_TYPES = new Set([
+  "Riots",
+  "Violence against civilians",
+  "Explosions/Remote violence",
+]);
+
+const DISORDER_EVENT_TYPES = new Set([
+  "Protests",
+  "Strategic developments",
+]);
+
+function parseAcledExcel(
+  buffer: ArrayBuffer,
+  allowedEventTypes?: Set<string>,
+): { totalEvents: number; fatalities: number; breakdown: Omit<AcledDetails, "weekDate" | "fileUrl"> } {
   const wb   = XLSX.read(new Uint8Array(buffer), { type: "array" });
   const ws   = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: 0 });
@@ -208,10 +223,12 @@ function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities
     const country   = String(row["COUNTRY"]    ?? row["country"]    ?? "Unknown");
     if (!EU_COUNTRIES.has(country)) continue;   // EU-27 only
 
-    filteredRows++;
-    const events    = Number(row["EVENTS"]     ?? row["events"]     ?? 0);
-    const fatal     = Number(row["FATALITIES"] ?? row["fatalities"] ?? 0);
     const eventType = String(row["EVENT_TYPE"] ?? row["event_type"] ?? "Unknown");
+    if (allowedEventTypes && !allowedEventTypes.has(eventType)) continue;
+
+    filteredRows++;
+    const events = Number(row["EVENTS"]     ?? row["events"]     ?? 0);
+    const fatal  = Number(row["FATALITIES"] ?? row["fatalities"] ?? 0);
 
     if (isFinite(events)) totalEvents += events;
     if (isFinite(fatal))  totalFatal  += fatal;
@@ -240,6 +257,7 @@ function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities
 
   console.info(
     `[ACLED] ${rows.length} rows total, ${filteredRows} for week serial ${latestWeek}` +
+    ` (filter: ${allowedEventTypes ? [...allowedEventTypes].join(", ") : "all"})` +
     ` → ${totalEvents} events, ${totalFatal} fatalities`
   );
 
@@ -251,35 +269,44 @@ function parseAcledExcel(buffer: ArrayBuffer): { totalEvents: number; fatalities
 }
 
 // ---------------------------------------------------------------------------
-// Public KRI function
+// Shared download helper
 // ---------------------------------------------------------------------------
 
-export async function measureAcledKri(): Promise<KriResult> {
-  // 1. Authenticate
+async function downloadLatestAcledFile(): Promise<{ buffer: ArrayBuffer; fileUrl: string; weekDate: string }> {
   const cookie = await getDrupalCookie();
-
-  // 2. Find and download latest weekly file
   const { url: fileUrl, weekDate } = await findLatestFileUrl(cookie);
-
   const fileRes = await fetch(fileUrl, {
     headers: { Cookie: cookie, "User-Agent": "Mozilla/5.0 (compatible; risk-scanner)" },
   });
-  if (!fileRes.ok) {
-    throw new Error(`Failed to download ACLED file (${fileRes.status}): ${fileUrl}`);
-  }
+  if (!fileRes.ok) throw new Error(`Failed to download ACLED file (${fileRes.status}): ${fileUrl}`);
   const buffer = await fileRes.arrayBuffer();
-  const { totalEvents, breakdown } = parseAcledExcel(buffer);
+  return { buffer, fileUrl, weekDate };
+}
 
-  // 3. Load history from DB — last 35 KRI measurements for this key
+// ---------------------------------------------------------------------------
+// Generic KRI builder
+// ---------------------------------------------------------------------------
+
+async function buildAcledKri(config: {
+  key:               string;
+  name:              string;
+  allowedEventTypes: Set<string>;
+  referenceEvents:   number;
+  buffer:            ArrayBuffer;
+  fileUrl:           string;
+  weekDate:          string;
+}): Promise<KriResult> {
+  const { key, name, allowedEventTypes, referenceEvents, buffer, fileUrl, weekDate } = config;
+
+  const { totalEvents, breakdown } = parseAcledExcel(buffer, allowedEventTypes);
+
   const history = await prisma.kriMeasurement.findMany({
-    where:   { key: "acled_violence" },
+    where:   { key },
     orderBy: { createdAt: "desc" },
     take:    35,
     select:  { volume7d: true, details: true, createdAt: true },
   });
 
-  // The file contains data for ONE week only — totalEvents is directly volume7d.
-  // If the file hasn't changed since last scan (same weekDate), reuse last volume7d.
   const prevMeasurement = history[0];
   let prevWeekDate = "";
   if (prevMeasurement?.details) {
@@ -288,57 +315,70 @@ export async function measureAcledKri(): Promise<KriResult> {
     } catch { /* ignore */ }
   }
 
-  // Always prefer fresh data from the file; fall back to stored value only if parse gave 0
   const volume7d = totalEvents > 0 ? totalEvents : (prevMeasurement?.volume7d ?? 0);
 
-  console.info(`[ACLED] weekDate=${weekDate}, prevWeek=${prevWeekDate || "none"}, totalEvents=${totalEvents}, volume7d=${volume7d}`);
+  console.info(`[ACLED:${key}] weekDate=${weekDate}, prevWeek=${prevWeekDate || "none"}, volume7d=${volume7d}`);
 
-  // Previous week: find most recent stored measurement with a different weekDate
   let volume7dPrev = 0;
   for (const m of history) {
     if (!m.details) continue;
     try {
       const d = JSON.parse(m.details) as { weekDate?: string };
-      if (d.weekDate && d.weekDate !== weekDate) {
-        volume7dPrev = m.volume7d;
-        break;
-      }
+      if (d.weekDate && d.weekDate !== weekDate) { volume7dPrev = m.volume7d; break; }
     } catch { /* ignore */ }
   }
 
-  // Sparkline: last 30 volume7d values from DB + current
-  const historicVolumes = history
-    .slice(0, 29)
-    .map((m) => m.volume7d)
-    .reverse();
+  const historicVolumes = history.slice(0, 29).map((m) => m.volume7d).reverse();
   const sparkline = [...historicVolumes, volume7d].slice(-30);
   while (sparkline.length < 30) sparkline.unshift(0);
-
   const avgDaily = sparkline.reduce((s, v) => s + v, 0) / sparkline.length;
 
-  // Trend
-  const trendPct =
-    volume7dPrev > 0
-      ? Math.round(((volume7d - volume7dPrev) / volume7dPrev) * 100)
-      : 0;
+  const trendPct = volume7dPrev > 0
+    ? Math.round(((volume7d - volume7dPrev) / volume7dPrev) * 100)
+    : 0;
   const trend: KriResult["trend"] =
     trendPct >= 10 ? "rising" : trendPct <= -10 ? "falling" : "stable";
 
-  // Score 0–100: 6 000 events/week = score 100 (≈ 2× observed Europe+Central Asia baseline ~3 000/week)
-  const REFERENCE_EVENTS = 6_000;
-  const score = Math.min(100, Math.round((volume7d / REFERENCE_EVENTS) * 100));
+  const score = Math.min(100, Math.round((volume7d / referenceEvents) * 100));
 
   return {
-    key:      "acled_violence",
-    name:     "Violence Events · EU (ACLED)",
+    key,
+    name,
     category: "Geopolitical",
     volume7d,
     volume7dPrev,
-    avgDaily: Math.round(avgDaily * 10) / 10,
+    avgDaily:  Math.round(avgDaily * 10) / 10,
     score,
     trend,
     trendPct,
     sparkline,
     details: { weekDate, fileUrl, ...breakdown } satisfies AcledDetails,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Public KRI functions
+// ---------------------------------------------------------------------------
+
+export async function measureAcledKri(): Promise<KriResult[]> {
+  const { buffer, fileUrl, weekDate } = await downloadLatestAcledFile();
+
+  const [violence, disorder] = await Promise.all([
+    buildAcledKri({
+      key:               "acled_violence",
+      name:              "Violence Events · EU (ACLED)",
+      allowedEventTypes: VIOLENCE_EVENT_TYPES,
+      referenceEvents:   1_500,   // 1 500 violence events/week ≈ elevated
+      buffer, fileUrl, weekDate,
+    }),
+    buildAcledKri({
+      key:               "acled_disorder",
+      name:              "Disorder Events · EU (ACLED)",
+      allowedEventTypes: DISORDER_EVENT_TYPES,
+      referenceEvents:   4_000,   // protests/strategic devs have much higher baseline
+      buffer, fileUrl, weekDate,
+    }),
+  ]);
+
+  return [violence, disorder];
 }
