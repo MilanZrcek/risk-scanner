@@ -80,8 +80,11 @@ function parseCountryFeed(countryCode: string, xml: string): MeteoWarning[] {
   for (const entry of entries) {
     const severity = extractTag(entry, "cap:severity").toLowerCase();
     if (!severity || severity === "minor" || severity === "unknown") continue;
-
     if (severity !== "extreme" && severity !== "severe") continue;
+
+    const event = extractTag(entry, "cap:event").toLowerCase();
+    if (event.includes("fog")) continue;
+
     warnings.push({
       country:  countryCode,
       area:     extractTag(entry, "cap:areaDesc"),

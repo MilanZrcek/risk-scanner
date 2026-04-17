@@ -462,7 +462,9 @@ const SEVERITY_STYLE: Record<string, { label: string; color: string; dot: string
 };
 
 function MeteoAlarmModal({ details, onClose }: { details: MeteoAlarmDetails; onClose: () => void }) {
-  const warnings = details.warnings.filter((w) => w.severity === "extreme" || w.severity === "severe");
+  const warnings = details.warnings.filter(
+    (w) => (w.severity === "extreme" || w.severity === "severe") && !w.event.toLowerCase().includes("fog")
+  );
   const redCount    = warnings.filter((w) => w.severity === "extreme").length;
   const orangeCount = warnings.filter((w) => w.severity === "severe").length;
 
